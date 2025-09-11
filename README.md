@@ -22,4 +22,34 @@ An automated solver for the Ziply puzzle game using computer vision and depth-fi
 - The board is simulated as a 2D array.  
 - A depth-first search with backtracking finds the valid path through all checkpoints.  
 - Grid coordinates are mapped back to pixel coordinates.  
-- `pyautogui` interacts with the browser to draw the solution automatically.  
+- `pyautogui` interacts with the browser to draw the solution automatically.
+
+## Installation
+
+### Using Conda
+To create the environment from the provided YAML file:
+
+```bash
+conda env create -f environment.yaml
+conda activate ziply-game-env
+```
+### Using Pip
+To install dependencies from requirements.txt:
+
+```bash
+python -m venv ziply-env
+```
+```bash
+source ziply-env/bin/activate      # macOS/Linux
+```
+```bash
+ziply-env\Scripts\activate.bat     # Windows
+```
+```bash
+pip install -r requirements.txt
+```
+After installation, run the program with: 
+```bash 
+python main.py
+```
+You will be prompted to click the window that contains the puzzle. Once clicked, there is a one second delay until it begins solving. Once it is finished, you can click "New Game" or refresh the webpage to continue solving puzzles indefinitely. Pressing Ctrl + C in terminal will exit the program.
