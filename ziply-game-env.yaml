@@ -1,0 +1,16 @@
+name: ziply-game-test
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - numpy=1.26.4
+  - pyautogui=0.9.54
+  - pynput=1.7.7
+  - python-mss=9.0.1
+  - python=3.12.3
+  - scipy=1.13.1
+  - tensorflow=2.18.1
+  - pip
+  - pip:
+    - opencv-python
+prefix: C:\Users\barna\anaconda3\envs\ziply-game-env
