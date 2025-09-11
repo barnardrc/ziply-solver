@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/demo.gif" alt="Ziply Solver Demo" width="400"/>
+</p>
+
 # ziply-solver
 An automated solver for the Ziply puzzle game using computer vision and depth-first search.
 
@@ -19,4 +23,3 @@ An automated solver for the Ziply puzzle game using computer vision and depth-fi
 - A depth-first search with backtracking finds the valid path through all checkpoints.  
 - Grid coordinates are mapped back to pixel coordinates.  
 - `pyautogui` interacts with the browser to draw the solution automatically.  
-![Demo GIF]
