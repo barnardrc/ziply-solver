@@ -1,4 +1,4 @@
-name: ziply-game-test
+name: ziply-game-env
 channels:
   - defaults
   - conda-forge
