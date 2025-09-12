@@ -43,6 +43,8 @@ class GameData:
         self.yOffsetRel = None
         self.xOffsetAbs = None
         self.xOffsetAbs = None
+        self.ocr_correction = False
+        self.replacedValues = None
         
         self.pieces = None
         
@@ -52,6 +54,7 @@ class GameData:
         self.circles = None
         self.orderedCircles = None
         self.squares = None
+        
         # Edges of the game board
         self.edges = None
         self.ocr_captures = None
@@ -75,6 +78,7 @@ class GameData:
     # Takes win dimension and captures img, storing as array in self.image
     def window_capture(self) -> "GameData":
         if len(self.dimensions) != 4:
+            cv.destroyAllWindows()
             raise ValueError(f"Expected 4 dimensions (top, left, width, height), got {len(self.dimensions)}")
             
         with mss.mss() as sct:
@@ -116,20 +120,24 @@ class GameData:
             maxRadius = 30 # Largest circle radius
             )
         
-        self.circles = np.uint16(np.around(circles))
-        
-        if circles is not None and self.ts:
-            circles = np.uint16(np.around(circles))
-            print(f"\ncircle coordinates: \n{circles}")
-            image = np.ascontiguousarray(np.array(self.image)[:, :, :3], dtype=np.uint8)
-            for (x, y, r) in circles[0, :]:
-                
-                # Draw circle outline
-                cv.circle(image, (x, y), r, (0, 255, 0), 2)
+        if circles is not None:
+            self.circles = np.uint16(np.around(circles))
             
-            cv.imshow("Circles Detected by detect_circles", image)
-            cv.waitKey(0)
-        
+            if self.ts:
+                circles = np.uint16(np.around(circles))
+                print(f"\ncircle coordinates: \n{circles}")
+                image = np.ascontiguousarray(np.array(self.image)[:, :, :3], dtype=np.uint8)
+                for (x, y, r) in circles[0, :]:
+                    
+                    # Draw circle outline
+                    cv.circle(image, (x, y), r, (0, 255, 0), 2)
+                
+                cv.imshow("Circles Detected by detect_circles", image)
+                
+        else:
+            cv.destroyAllWindows()
+            raise Exception("No circles detected. Did you click the puzzle window?")
+
         return self
 
     
@@ -152,11 +160,10 @@ class GameData:
 
     # Cluster detection to further isoalte the circles within the game prior to
     # edge detection
-    def detect_clusters(self):
+    def detect_clusters(self, expectedCircles = 8):
         #print(f"Before detect_clusters: {self.circles}")
         # Isolating x and y coords within the return from HoughCircles
         points = np.array([[x, y] for x, y, r in self.circles[0, :]])
-        
         
         Z = linkage(points, method = 'average')
 
@@ -165,11 +172,16 @@ class GameData:
         labelsFilter = self._get_most_common(labels, 2)
         
         self.circles = self._filter_circles(self.circles, labels, labelsFilter)
-        
+        amtCircles = len(self.circles)
         #print(f"Circles in GameData:\n{self.circles}")
         if self.ts:
-            print(f"\nlabels for Clustering: {labels}")
-        
+            print(f"\nFinal circle amount considered: {amtCircles}")
+            print(f"labels for Clustering: {labels}")
+            
+        if amtCircles != expectedCircles:
+            cv.destroyAllWindows()
+            raise ValueError(f"Expected {expectedCircles} Circles but received {amtCircles} Circles.")
+            
         return self
     
     # Get circle relative boundary to identify a region of interest, then increase
@@ -222,13 +234,26 @@ class GameData:
         top, left, width, height = self.dimensions
         top, left, width, height = map(int, (top, left, width, height))
         
-        self.image = self.image[top:top+height, left:left+width]
+        # Clamp coordinates to the image bounds
+        img_height, img_width = self.image.shape[:2]
+        top = max(0, top)
+        left = max(0, left)
+        bottom = min(img_height, top + height)
+        right = min(img_width, left + width)
+       
+        self.image = self.image[top:bottom, left:right]
         
         if self.ts:
-            print()
-            print("Top, Left from self.dimensions used in getting the slice")
-            print(top)
-            print(left)
+            image = np.ascontiguousarray(np.array(self.image)[:, :, :3], dtype=np.uint8)
+            print("\nDimensions used in getting the slice:")
+            print(f"Top: {top}")
+            print(f"Left: {left}")
+            print(f"Width: {right - left}")
+            print(f"Height: {bottom - top}")
+            cv.imshow("ROI", image)
+            cv.waitKey(0)
+            
+        # Setting the relative offsets for pixel conversion
         self.xOffsetRel = left
         self.yOffsetRel = top
         
@@ -236,7 +261,9 @@ class GameData:
     
     # Canny edge detector into HoughLinesP
     def canny_edge(self):
-            
+        if self.image is None or self.image.size == 0:
+           raise Exception("Image passed to canny_edge is broken. Try resizing window.")
+       
         src_gray = cv.cvtColor(self.image, cv.COLOR_RGB2GRAY)
     
         low_threshold = self.cannyThreshold
@@ -246,18 +273,23 @@ class GameData:
                                   low_threshold*self.ratio,
                                   self.kernel_size
                                   )
-
+        
         # inclusion of HoughLineP:
-        self.edges = cv.HoughLinesP(detected_edges, 1, np.pi/180, 100, 
-                               minLineLength=225, maxLineGap=0
-                               )
-        if self.ts:
-            image = np.ascontiguousarray(np.array(self.image)[:, :, :3], dtype=np.uint8)
-            for x1,y1,x2,y2 in self.edges[:,0]:
-                cv.line(image, (x1,y1), (x2,y2), (0,255,0), 2)
+        if detected_edges is not None:
+            self.edges = cv.HoughLinesP(detected_edges, 1, np.pi/180, 100, 
+                                   minLineLength=225, maxLineGap=0
+                                   )
+            if self.ts:
+                image = np.ascontiguousarray(np.array(self.image)[:, :, :3], dtype=np.uint8)
+                for x1,y1,x2,y2 in self.edges[:,0]:
+                    cv.line(image, (x1,y1), (x2,y2), (0,255,0), 2)
+                    
+                cv.imshow("Edges from canny_edge", image)
+                cv.waitKey(0)
                 
-            cv.imshow("Edges from canny_edge", image)
-            cv.waitKey(0)
+        else:
+            cv.destroyAllWindows()
+            raise Exception("No edges were detected in the ROI.")
             
         return self
     
@@ -343,7 +375,8 @@ class GameData:
             return self
         
         else:
-            raise ValueError(f"Expected only 8 circles, received {lengthOfArray}")
+            cv.destroyAllWindows()
+            raise ValueError(f"Expected 8 circles, received {lengthOfArray}")
             
             
     def extract_square_images(self):
@@ -400,7 +433,52 @@ class GameData:
         
         return self
     
+    # takes a list and returns the index of the first value that is repeated
+    def _identify_repeat_loc(self, l: list) -> int:
+        counts = Counter(l)
+        x = max(counts, key=counts.get)
+        idx = l.index(x)
+        return idx, x
+    
+    # takes a sequential (does not have to be ordered) list and returns the
+    # missing value in the sequence
+    def _identify_missing(self, l: list, expectedLength: int = 8) -> int:
+        targetList = sorted(set(l))
+        
+        for i, x in enumerate(targetList, start=1):
+            if i - x != 0:
+                return i
+                break
+        
+        return expectedLength
+    
+    # Replace a location in target list with value
+    def _replace_value(self, l: list, t: int, loc: int) -> list:
+        # list[index_to_replace] = target
+        l[loc] = t
+    
+    # runs repeat value replacement workflow
+    def _ocr_correction(self):
+        missing = self._identify_missing(self.predictions)
+        repeat, val = self._identify_repeat_loc(self.predictions)
+        
+        self.ocr_correction = True
+        self.replacedValues = (val, missing)
+        
+        print(f"Value missing: {missing}")
+        print(f"location of missing value: {missing}")
+        
+        self._replace_value(self.predictions, missing, repeat)
+        
     def order_circles(self):
+        
+        if len(set(self.predictions)) != len(self.predictions):
+            print("Guessing for an OCR correction... ")
+            print(self.predictions)
+            self._ocr_correction()
+            print(self.predictions)
+            #raise Exception("OCR Failed")
+            
         paired = list(zip(self.predictions, self.circles))
         
         paired_sorted = sorted(paired, key=lambda x: x[0])
@@ -425,16 +503,23 @@ class GameData:
         return self
     
     def grid_to_pixels(self, solutionPath):
-        shiftedPath = [(x + 0.5, y + 0.5) for x, y in solutionPath]
-        self.pixel_coords = ([(x * self.xFactor, y * self.yFactor) 
-                              for x, y in shiftedPath]
-                             )
-        self.pixel_coords = ([(int(x + self.leftEdge), int(y + self.topEdge)) 
-                                  for x, y in self.pixel_coords]
+        if solutionPath is not None:
+            shiftedPath = [(x + 0.5, y + 0.5) for x, y in solutionPath]
+            self.pixel_coords = ([(x * self.xFactor, y * self.yFactor) 
+                                  for x, y in shiftedPath]
                                  )
+            self.pixel_coords = ([(int(x + self.leftEdge), int(y + self.topEdge)) 
+                                      for x, y in self.pixel_coords]
+                                     )
+        else:
+            cv.destroyAllWindows()
+            raise Exception("Lines already drawn, refresh the puzzle.")
+            
+            
         if self.ts:
             print("relative coord solution: ")
             print(self.pixel_coords)
+            
         return self
     
     def get_absolute_coords(self):
@@ -453,4 +538,17 @@ class GameData:
             print(self.pixel_coords)
             
         return self
-                
+    
+    def swap_corrected_vals(self):
+        try:
+            val1, val2 = self.replacedValues
+            
+            idx1 = self.orderedCircles.index(val1)
+            idx2 = self.orderedCircles.index(val2)
+            
+            self.orderedCircles[idx1], self.orderedCircles[idx2] = (
+                self.orderedCircles[idx2], self.orderedCircles[idx1]
+                )
+            
+        except Exception:
+            raise Exception(f"swap_corrected_vals failed!\nThis feature is largely untested.")

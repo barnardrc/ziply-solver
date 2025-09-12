@@ -15,7 +15,6 @@ def check_environment():
 
     # --- Windows ---
     if system == "windows":
-        print("windows detected")
         return "windows"
 
     # --- macOS ---
