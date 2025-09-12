@@ -304,11 +304,6 @@ class GameData:
         xs = np.concatenate([self.edges[:, 0], self.edges[:, 2]])  # all x1 and x2
         ys = np.concatenate([self.edges[:, 1], self.edges[:, 3]])  # all y1 and y2
         
-        if self.ts:
-            print()
-            print(f"all x in edges: {xs}")
-            print(f"all y in edges: {ys}")
-        
         xmin, xmax = xs.min(), xs.max()
         ymin, ymax = ys.min(), ys.max()
         
@@ -317,10 +312,15 @@ class GameData:
         self.leftEdge = xmin + self.xOffsetRel
         self.rightEdge = xmax + self.xOffsetRel
         self.botEdge = ymax + self.yOffsetRel
+                
+        if self.ts:
+            print()
+            #print(f"all x in edges: {xs}")
+            #print(f"all y in edges: {ys}")
         
         return self
     
-    def fill_background(self, pad=3):
+    def fill_background(self, pad: int = 3):
         """
         Black out everything outside the circles, shrinking the circles slightly 
         to remove slivers. 
@@ -351,7 +351,7 @@ class GameData:
     
     # Take the circle coords and return the dimensions of the cooresponding
     # square for OCR capture
-    def get_squares(self, n = 8):
+    def get_squares(self, n: int = 8):
         lengthOfArray = len(self.circles)
         # Check length of array
         if lengthOfArray == n:
@@ -433,6 +433,7 @@ class GameData:
         
         return self
     
+    """
     # takes a list and returns the index of the first value that is repeated
     def _identify_repeat_loc(self, l: list) -> int:
         counts = Counter(l)
@@ -453,7 +454,7 @@ class GameData:
         return expectedLength
     
     # Replace a location in target list with value
-    def _replace_value(self, l: list, t: int, loc: int) -> list:
+    def _replace_value(self, l: list, loc: int, t: int, ) -> list:
         # list[index_to_replace] = target
         l[loc] = t
     
@@ -468,16 +469,13 @@ class GameData:
         print(f"Value missing: {missing}")
         print(f"location of missing value: {missing}")
         
-        self._replace_value(self.predictions, missing, repeat)
-        
+        self._replace_value(self.predictions, repeat, missing)
+    """
+    
     def order_circles(self):
         
         if len(set(self.predictions)) != len(self.predictions):
-            print("Guessing for an OCR correction... ")
-            print(self.predictions)
-            self._ocr_correction()
-            print(self.predictions)
-            #raise Exception("OCR Failed")
+            raise Exception("OCR Failed")
             
         paired = list(zip(self.predictions, self.circles))
         
@@ -541,14 +539,15 @@ class GameData:
     
     def swap_corrected_vals(self):
         try:
-            val1, val2 = self.replacedValues
+            # Since the list is ordered, the values that were replaced
+            # in the unordered list become associated with the index
+            idx1, idx2 = self.replacedValues
             
-            idx1 = self.orderedCircles.index(val1)
-            idx2 = self.orderedCircles.index(val2)
-            
-            self.orderedCircles[idx1], self.orderedCircles[idx2] = (
-                self.orderedCircles[idx2], self.orderedCircles[idx1]
+            print(self.orderedCircles)
+            self.orderedCircles[idx1-1], self.orderedCircles[idx2-1] = (
+                self.orderedCircles[idx2-1], self.orderedCircles[idx1-1]
                 )
+            print(self.orderedCircles)
             
         except Exception:
-            raise Exception(f"swap_corrected_vals failed!\nThis feature is largely untested.")
+            raise Exception("swap_corrected_vals failed!\nThis feature is largely untested.")

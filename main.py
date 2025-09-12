@@ -195,66 +195,60 @@ def main():
     i = 0
     try:
         while True:
-            complete = False
             
             if i > 0:
                 print("\nNew Game... ")
                 wait_for_click()
                 time.sleep(1)
                 
-            while not complete:
-                data = (
-                    GameData() # data pipeline
-                         #.toggle_ts_mode() #ts_mode largely provides a step by step
-                                             # of what is happening
-                         .get_window_rect()
-                         .window_capture()
-                         .detect_circles()
-                         .detect_clusters()
-                         .get_circle_region_bounds()
-                         .get_roi()
-                         .canny_edge()
-                         .set_board_edges()
-                         .fill_background()
-                         .get_squares()
-                         .extract_square_images()
-                         .predict_digits()
-                         .order_circles()
-                         .pixels_to_grid()
-                 )
+            data = (
+                GameData() # data pipeline
+                     #.toggle_ts_mode() #ts_mode largely provides a step by step
+                                         # of what is happening
+                     .get_window_rect()
+                     .window_capture()
+                     .detect_circles()
+                     .detect_clusters()
+                     .get_circle_region_bounds()
+                     .get_roi()
+                     .canny_edge()
+                     .set_board_edges()
+                     .fill_background()
+                     .get_squares()
+                     .extract_square_images()
+                     .predict_digits()
+                     .order_circles()
+                     .pixels_to_grid()
+             )
+            
+            # Create the board and populate it with checkpoints
+            board = create_gameboard()
+            #print(f"final grid locations: {data.grid_locations}")
+            
+            board, displayBoard = populate_gameboard(data.grid_locations, board)
+            print(f"\n{displayBoard}\n")
+            
+            # Time solving the path
+            startTime = time.time()
+            solution, recursions = solve_puzzle(
+                board,
+                data.grid_locations, 
+                moves,
+                directionalPriority
+                )
+            endTime = time.time()
+            elapsedTime = endTime - startTime
+            
+            print(f"Directional Priority: {directionalPriority}")
+            print(f"Time to solve: {elapsedTime:.3f}s")
+            print(f"Total recursions: {recursions}")
+            
+            if solution is not None:
+                data.grid_to_pixels(solution).get_absolute_coords()
+                complete_puzzle(data.pixel_coords)
                 
-                # Create the board and populate it with checkpoints
-                board = create_gameboard()
-                print(f"final grid locations: {data.grid_locations}")
-                board, displayBoard = populate_gameboard(data.grid_locations, board)
-                
-                print(f"\n{displayBoard}\n")
-                # Time solving the path
-                startTime = time.time()
-                solution, recursions = solve_puzzle(
-                    board,
-                    data.grid_locations, 
-                    moves,
-                    directionalPriority
-                    )
-                endTime = time.time()
-                
-                elapsedTime = endTime - startTime
-                print(f"Directional Priority: {directionalPriority}")
-                print(f"Time to solve: {elapsedTime:.3f}s")
-                print(f"Total recursions: {recursions}")
-                
-                if solution is not None:
-                    data.grid_to_pixels(solution).get_absolute_coords()
-                    complete_puzzle(data.pixel_coords)
-                    complete = True
-                
-                
-                #elif data.ocr_correction:
-                    #data.swap_corrected_vals()
-                    
-                else:
-                    raise Exception("Lines already drawn - refresh the puzzle.\n If you keep getting this error, resize the window.")
+            else:
+                raise Exception("Lines already drawn - refresh the puzzle.\n If you keep getting this error, resize the window.")
                 
             i+=1
         
