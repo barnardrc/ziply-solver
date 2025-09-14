@@ -124,7 +124,7 @@ def main():
         type=int,
         default=100,
         dest='simulationLength',
-        help = "First simulationLength coordinates will be simulated: sl={int}")
+        help = "First SIMULATIONLENGTH coordinates will be simulated.")
     
     args = parser.parse_args()
     
