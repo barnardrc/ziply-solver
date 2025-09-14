@@ -10,26 +10,43 @@ x11 for pyautogui and mss, and otherwise is untested in that environment.
 
 @author: barna
 """
+# ----- Import Start ----- #
 
+# Force mpl backend
+import matplotlib
+matplotlib.use('TkAgg')
+
+# Packages
+import threading
 import time
 from pynput import mouse
-from game_data import GameData
-from compat import check_environment
 import numpy as np
 import pyautogui as pag
+import matplotlib.pyplot as plt
+import argparse
 
-def on_click(x, y, button, pressed):
-    global click_received
-    #print(f"Position Clicked: {x}, {y}.")
-    if pressed:
-        click_received = True
-        return False
+# Local Modules
+from compat import check_environment
+from animation_utils.board_anim import live_animation
+from game_data import GameData
+from solvers import backtrack_dfs
+
+# ----- Import End ----- #
 
 def wait_for_click():
-    global click_received
-    click_received = False
-    with mouse.Listener(on_click=on_click) as listener:
+    
+    click_event = threading.Event()
+    
+    def _on_click(x, y, button, pressed):
+    
+        if pressed:
+            click_event.set()
+            return False
+    
+    with mouse.Listener(on_click=_on_click) as listener:
         listener.join()
+    
+    click_event.wait()
         
 def create_gameboard():
     board = np.zeros((6, 6), dtype=int)
@@ -45,118 +62,6 @@ def populate_gameboard(list_of_coords, board):
     
     return board, displayBoard
 
-def find_next_checkpoint_direction(targetCoords, coords):
-    """
-    Takes the current location and the target and returns the direction 
-    towards the target.
-    """
-    y, x = (targetCoords[0] - coords[0]), (targetCoords[1] - coords[1])
-    
-    if abs(x) > abs(y):
-        if x < 0:
-            return (-1, 0)
-        else:
-            return (1, 0)
-    else:
-        if y < 0:
-            return (0, -1)
-        else:
-            return (0, 1)
-        
-    
-def is_valid(x, y, visited, n=6):
-    """
-    Checks that a move resulted in a position that is still within
-    the game board boundaries and that it has not been visited 
-    yet (no intersecting previously visited positions).
-    """
-    return 0 <= x < n and 0 <= y < n and (x, y) not in visited
-
-def solve_puzzle(board, coords, moves, directionalPriority = True):
-    """
-    A depth-first search that explores as deep as it can before backtracking
-    """
-    N = board.shape[0]
-    path = []
-    visited = set()
-    recursions = 0
-    move_order = moves.keys()
-    
-    def backtrack(x, y, target, visited_count):
-        nonlocal recursions
-        nonlocal move_order
-        
-        # Tracking recursions
-        recursions += 1
-        path.append((x, y))
-        visited.add((x, y))
-        
-        # Initial completion condition - visiting all 36 spaces
-        if visited_count == N * N:
-            return True
-        
-        """
-        Checks if current space is the list of coords that cooresponds
-        to the positions of the checkpoints. 
-        """
-        if (x, y) in coords:
-            # If on a checkpoint space (in coords), then check it is 
-            # the correct one - so visiting them in order
-            idx = coords.index((x, y)) + 1
-            #if not, backtrack (first iteration always passes)
-            if idx != target:
-                path.pop()
-                visited.remove((x, y))
-                return False
-            
-            # Special check if on 8 - if its not the last tile hit,
-            # backtrack.
-            if (idx == 8 and 
-                target == 8 and 
-                visited_count != N * N
-                ):
-                path.pop()
-                visited.remove((x, y))
-                return False
-            
-            # If all checks passed, set the next target
-            target += 1
-            
-        # Find and prioritize the direction of the next target
-        # Only updates once after each checkpoint hit if enabled
-        if target <= len(coords) and directionalPriority:
-            tx, ty = coords[target-1]
-            def dist(m):
-                dx, dy = m
-                return abs((x+dx)- tx) + abs((y+dy) - ty) # Manhattan
-            move_order = sorted(move_order, key = dist)
-            
-        # Finally, make a move
-        # Loops through each move (4) in the move set and checks
-        # whether it is valid. If it is, it recurses again.
-        for dx, dy in move_order:
-            # Applies that move to the current coordinates
-            nx, ny = x + dx, y + dy
-            # Checks if it is a valid move (on board, not visited yet)
-            if is_valid(nx, ny, visited, N):
-                # if it is, it recurses another level with new coords
-                if backtrack(nx, ny, target, visited_count + 1):
-                    return True
-        
-        # if no valid move was found, it backtracks
-        path.pop()
-        visited.remove((x, y))
-        return False
-    
-    start = coords[0]
-    
-    if backtrack(start[0], start[1], 1, 1):
-        print("Solved!")
-        return path, recursions
-    
-    print("No Solution")
-    return None, recursions
-
 def coords_to_directions(path, moveset):
     directions = []
     for (x1, y1), (x2, y2) in zip(path, path[1:]):
@@ -171,13 +76,68 @@ def complete_puzzle(absolute_coords):
         pag.moveTo(x, y)
     pag.mouseUp()
 
-# init listener thread for mouse listener globally because im shit at python
-listener = mouse.Listener(on_click = on_click)
-
-
+def make_feeder(path, add_pt, timer_obj):
+    point_index = 0
+    def feed_next_point():
+        """Timer callback – add one point per call."""
+        nonlocal point_index
+        if point_index < len(path):
+            add_pt(path[point_index])   # <-- pushes the point into the deque
+            point_index += 1
+        else:
+            # all points have been sent – stop the timer
+            timer_obj.stop()
+        
+    return feed_next_point
 
 def main():
+    # ----- argparser ----- #
+    
+    parser = argparse.ArgumentParser(description="A solver for the Ziply directional graph puzzle.")
+    
+    # Display animation that simulates the path the algorithm takes
+    parser.add_argument(
+        '-na','--no-animation', 
+        action='store_false', 
+        dest='displayAnimation',
+        help="Disable the final path animation."
+    )
+    
+    # Draw solution in browser
+    parser.add_argument(
+        '-ns','--no-solution', 
+        action='store_false',
+        dest='drawSolution',
+        help="Disable drawing in the puzzle window."
+    )
+    
+    # Print solution coords to console
+    parser.add_argument(
+        '-dc','--display-coords', 
+        action='store_true',
+        dest='displaySolutionCoords',
+        help="Print the final solution coordinates to the console."
+    )
+    # Change simulation length
+    parser.add_argument(
+        '-sl', '--sim-length',
+        type=int,
+        default=100,
+        dest='simulationLength',
+        help = "First simulationLength coordinates will be simulated: sl={int}")
+    
+    args = parser.parse_args()
+    
+    displayAnimation = args.displayAnimation
+    drawSolution = args.drawSolution
+    displaySolutionCoords = args.displaySolutionCoords
+    simulationLength = args.simulationLength  # Will be 100 by default
+    print(f"Simulation will run for {simulationLength} coordinates.")
+    
+    # ----- argparser end ----- #
+    
     check_environment()
+    
     # Move set
     moves = {
         (-1, 0): "LEFT",
@@ -185,75 +145,99 @@ def main():
         (0, -1): "UP",
         (0, 1): "DOWN"
     }
-    # Prioritize direction of next checkpoint
-    directionalPriority = False
     
     print("Click the window containing the puzzle... ")
     wait_for_click()
     time.sleep(1)
     
-    i = 0
+
     try:
-        while True:
-            
-            if i > 0:
-                print("\nNew Game... ")
-                wait_for_click()
-                time.sleep(1)
-                
-            data = (
-                GameData() # data pipeline
-                     #.toggle_ts_mode() #ts_mode largely provides a step by step
-                                         # of what is happening
-                     .get_window_rect()
-                     .window_capture()
-                     .detect_circles()
-                     .detect_clusters()
-                     .get_circle_region_bounds()
-                     .get_roi()
-                     .canny_edge()
-                     .set_board_edges()
-                     .fill_background()
-                     .get_squares()
-                     .extract_square_images()
-                     .predict_digits()
-                     .order_circles()
-                     .pixels_to_grid()
-             )
-            
-            # Create the board and populate it with checkpoints
-            board = create_gameboard()
-            #print(f"final grid locations: {data.grid_locations}")
-            
-            board, displayBoard = populate_gameboard(data.grid_locations, board)
-            print(f"\n{displayBoard}\n")
-            
-            # Time solving the path
-            startTime = time.time()
-            solution, recursions = solve_puzzle(
-                board,
-                data.grid_locations, 
-                moves,
-                directionalPriority
-                )
-            endTime = time.time()
-            elapsedTime = endTime - startTime
-            
-            print(f"Directional Priority: {directionalPriority}")
-            print(f"Time to solve: {elapsedTime:.3f}s")
-            print(f"Total recursions: {recursions}")
-            
-            if solution is not None:
-                data.grid_to_pixels(solution).get_absolute_coords()
-                complete_puzzle(data.pixel_coords)
-                
-            else:
-                raise Exception("Lines already drawn - refresh the puzzle.\n If you keep getting this error, resize the window.")
-                
-            i+=1
+        data = (
+            GameData() # data pipeline
+                 #.toggle_ts_mode() #ts_mode largely provides a step by step
+                                     # of what is happening
+                 .get_window_rect()
+                 .window_capture()
+                 .detect_circles()
+                 .detect_clusters()
+                 .get_circle_region_bounds()
+                 .get_roi()
+                 .canny_edge()
+                 .set_board_edges()
+                 .fill_background()
+                 .get_squares()
+                 .extract_square_images()
+                 .predict_digits()
+                 .order_circles()
+                 .pixels_to_grid()
+         )
         
+        # Create the board and populate it with checkpoints
+        board = create_gameboard()
+        #print(f"final grid locations: {data.grid_locations}")
+        
+        board, displayBoard = populate_gameboard(data.grid_locations, board)
+
+        
+        # Time solving the path
+        startTime = time.time()
+        solution, recursions, visited = backtrack_dfs(
+            board,
+            data.grid_locations, 
+            moves,
+            simulationLength
+            )
+        
+        endTime = time.time()
+        elapsedTime = endTime - startTime
+        
+        if displaySolutionCoords:
+            print(f"Game Board:\n{displayBoard}\n")
+            
+            print(f"Solution path:\n{solution}\n")
+            
+        print(f"Time to solve: {elapsedTime:.3f}s")
+        print(f"Total recursions: {recursions}")
+        
+        if solution is not None:
+            data.grid_to_pixels(solution).get_absolute_coords()
+            
+            # Run puzzle solving and solution drawing at the same time
+            puzzle_thread = threading.Thread(
+                target = complete_puzzle,
+                args=(data.pixel_coords,)
+                )
+            
+            if drawSolution:
+                puzzle_thread.start()
+                
+            if displayAnimation:
+                # Create animation
+                anim, add_point = live_animation(
+                        displayBoard,
+                        interval=50,               # ms between frames → ~25 fps
+                        line_width=2,
+                        line_color='crimson',
+                        line_alpha=0.5,
+                        draw_arrows=True,
+                        fps=12,
+                        fade_frames = 100)
+                
+                # Fire timer ever 50ms
+                timer = anim._fig.canvas.new_timer(interval=50)
+                timer.add_callback(make_feeder(visited, add_point, timer))
+                timer.start()
+
+                plt.show()
+            
+        else:
+            raise Exception("Lines already drawn - refresh the puzzle.\n If you keep getting this error, resize the window.")
+            
+            
     except KeyboardInterrupt:
         print("Exiting... ")
+            
+
     
 if __name__ == "__main__":
     main()
