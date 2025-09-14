@@ -52,8 +52,28 @@ If you are on MacOS, you will also need to install pyobj.
 ```bash
 pip install -U pyobjc
 ```
-After installation, run the program with: 
-```bash 
-python main.py
+
+## Usage
+
+After installation, run the program from the root directory:
+```bash
+python main.py [OPTIONS]
 ```
 You will be prompted to click the window that contains the puzzle. Once clicked, there is a one second delay until it begins solving. Once it is finished, you can click "New Game" or refresh the webpage to continue solving puzzles indefinitely. Pressing Ctrl + C in terminal will exit the program.
+
+### Comand-Line Options
+
+The following optional arguments are available to customize the script's behavior:
+
+- --no-animation (-na): Disables the final Matplotlib animation that shows the algorithm's path.
+
+- --no-solution (-ns): Disables the automatic drawing of the solution in the puzzle window.
+
+- --display-coords (-dc): Prints the final solution path as a list of coordinates to the console and the board as an array.
+
+- --sim-length N (-sl N): Animates only the first N steps of the algorithm's path. (Default: 100)
+
+For a full list of commands, you can always run:
+```bash
+python main.py --help
+```
