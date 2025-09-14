@@ -48,6 +48,10 @@ ziply-env\Scripts\activate.bat     # Windows
 ```bash
 pip install -r requirements.txt
 ```
+If you are on MacOS, you will also need to install pyobj.
+```bash
+pip install -U pyobjc
+```
 After installation, run the program with: 
 ```bash 
 python main.py
