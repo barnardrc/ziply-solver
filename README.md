@@ -65,13 +65,15 @@ You will be prompted to click the window that contains the puzzle. Once clicked,
 
 The following optional arguments are available to customize the script's behavior:
 
-- --no-animation (-na): Disables the final Matplotlib animation that shows the algorithm's path.
+- --show-animation (-na): Enables the final Matplotlib animation that shows the algorithm's path.
 
 - --no-solution (-ns): Disables the automatic drawing of the solution in the puzzle window.
 
 - --display-coords (-dc): Prints the final solution path as a list of coordinates to the console and the board as an array.
 
-- --sim-length N (-sl N): Animates only the first N steps of the algorithm's path. (Default: 100)
+- --sim-length N (-sl N): Animates only the first N steps of the algorithm's path. (Default: 1000)
+
+- --show-heatmap (-hm): Show heatmap of possible intersections between checkpoints
 
 For a full list of commands, you can always run:
 ```bash
