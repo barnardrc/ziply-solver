@@ -27,11 +27,13 @@ import argparse
 
 # Local Modules
 from compat import check_environment
-from animation_utils.board_anim import live_animation
+from visualization_utils.board_anim import live_animation
+from visualization_utils.intersection_heatmap import intersection_heatmap
 from game_data import GameData
-from solvers import backtrack_dfs
+from solvers.backtrack_dfs import solve_puzzle
 
 # ----- Import End ----- #
+
 
 def wait_for_click():
     
@@ -97,10 +99,10 @@ def main():
     
     # Display animation that simulates the path the algorithm takes
     parser.add_argument(
-        '-na','--no-animation', 
-        action='store_false', 
+        '-sa','--show-animation', 
+        action='store_true', 
         dest='displayAnimation',
-        help="Disable the final path animation."
+        help="Enable the final path animation."
     )
     
     # Draw solution in browser
@@ -118,16 +120,24 @@ def main():
         dest='displaySolutionCoords',
         help="Print the final solution coordinates to the console."
     )
+    # Show heatmap of intersections
+    parser.add_argument(
+        '-hm','--show-heatmap', 
+        action='store_true',
+        dest='displayHeatmap',
+        help="Show the heatmap of intersecting possible paths."
+    )
     # Change simulation length
     parser.add_argument(
         '-sl', '--sim-length',
         type=int,
-        default=100,
+        default=1000,
         dest='simulationLength',
         help = "First SIMULATIONLENGTH coordinates will be simulated.")
     
     args = parser.parse_args()
     
+    displayHeatmap = args.displayHeatmap
     displayAnimation = args.displayAnimation
     drawSolution = args.drawSolution
     displaySolutionCoords = args.displaySolutionCoords
@@ -138,14 +148,6 @@ def main():
     
     check_environment()
     
-    # Move set
-    moves = {
-        (-1, 0): "LEFT",
-        (1, 0): "RIGHT",
-        (0, -1): "UP",
-        (0, 1): "DOWN"
-    }
-    
     print("Click the window containing the puzzle... ")
     wait_for_click()
     time.sleep(1)
@@ -154,8 +156,8 @@ def main():
     try:
         data = (
             GameData() # data pipeline
-                 #.toggle_ts_mode() #ts_mode largely provides a step by step
-                                     # of what is happening
+                 #.toggle_ts_mode() # ts_mode largely provides a step by step
+                                    # of what is happening for pre-processing
                  .get_window_rect()
                  .window_capture()
                  .detect_circles()
@@ -181,23 +183,25 @@ def main():
         
         # Time solving the path
         startTime = time.time()
-        solution, recursions, visited = backtrack_dfs(
+        solution, moves, visited = solve_puzzle(
             board,
-            data.grid_locations, 
-            moves,
+            data.grid_locations,
             simulationLength
             )
         
         endTime = time.time()
         elapsedTime = endTime - startTime
         
+        # Good if extracting a game board
         if displaySolutionCoords:
-            print(f"Game Board:\n{displayBoard}\n")
+            showBoard = np.array2string(displayBoard, separator = ', ')
+            print(f"Game Board:\n{showBoard}\n")
+            print(f"Circle Coordinates: {data.grid_locations}")
             
             print(f"Solution path:\n{solution}\n")
             
         print(f"Time to solve: {elapsedTime:.3f}s")
-        print(f"Total recursions: {recursions}")
+        print(f"Total moves: {moves}")
         
         if solution is not None:
             data.grid_to_pixels(solution).get_absolute_coords()
@@ -210,6 +214,11 @@ def main():
             
             if drawSolution:
                 puzzle_thread.start()
+            
+            if displayHeatmap:
+                intersection_heatmap(displayBoard, data.grid_locations)
+                
+                plt.show()
                 
             if displayAnimation:
                 # Create animation
@@ -236,7 +245,7 @@ def main():
             
     except KeyboardInterrupt:
         print("Exiting... ")
-            
+        
 
     
 if __name__ == "__main__":

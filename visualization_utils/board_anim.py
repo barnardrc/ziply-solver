@@ -26,7 +26,7 @@ def draw_board(ax: plt.Axes,
                circle_edgecolor: str = "purple",
                circle_linewidth: float = 3,
                circle_radius: float = 0.35) -> None:
-
+    """Same draw_board you already have – unchanged."""
     H, W = board.shape
     ax.set_xticks([]); ax.set_yticks([])
     ax.set_xlim(-0.5, W - 0.5)
@@ -67,7 +67,7 @@ def live_animation(board: np.ndarray,
     """
     Returns two objects:
         * the FuncAnimation instance (must stay alive)
-        * a callback thats called from any thread
+        * a *callback* `add_point((row, col))` that you can call from any thread
     """
     fig, ax = plt.subplots(figsize=(5, 5))
     draw_board(ax, board)
@@ -78,16 +78,20 @@ def live_animation(board: np.ndarray,
     
     rc2xy = lambda rc: (rc[1], rc[0])           # (row, col) → (x, y)
 
+    # -----------------------------------------------------------------
     #  line / arrow artists
+    # -----------------------------------------------------------------
     line_collection = LineCollection([], linewidth=line_width,
                                      capstyle='round',
                                      zorder=5)
     
     ax.add_collection(line_collection)
 
-    arrow_art = []
+    arrow_art = []                               # at most one FancyArrowPatch
 
+    # -----------------------------------------------------------------
     #  spline helper
+    # -----------------------------------------------------------------
     def recompute_spline():
         if len(live_path) < 2:
             return np.array([]), np.array([])
@@ -102,7 +106,9 @@ def live_animation(board: np.ndarray,
         t_dense = np.linspace(0, len(pts) - 1, n_dense)
         return spline_x(t_dense), spline_y(t_dense)
 
+    # -----------------------------------------------------------------
     #  animation callbacks
+    # -----------------------------------------------------------------
     def init():
         line_collection.set_segments([])
         return line_collection,
@@ -156,7 +162,9 @@ def live_animation(board: np.ndarray,
                         cache_frame_data=False,
                         repeat=False)
 
+    # -----------------------------------------------------------------
     #  public helper that the solver will call
+    # -----------------------------------------------------------------
     def add_point(rc):
         """Thread‑safe (deque.append is atomic in CPython)."""
         live_path.append(rc)
