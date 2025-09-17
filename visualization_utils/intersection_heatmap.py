@@ -5,9 +5,6 @@ Created on Fri Sep 12 16:18:52 2025
 @author: barna
 """
 
-# ------------------------------------------------------------
-# board_anim.py
-# ------------------------------------------------------------
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -43,8 +40,8 @@ def get_rect(ordered_circles):
             height = y_max - y_min
 
             rect = Rectangle((x_min, y_min), width, height,
-                             edgecolor=colors[0],
-                             facecolor=colors[2],
+                             edgecolor=colors[2],
+                             facecolor=colors[3],
                              alpha=alpha)
             rectangles.append(rect)
             
