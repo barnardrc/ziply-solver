@@ -59,7 +59,7 @@ After installation, run the program from the root directory:
 ```bash
 python main.py [OPTIONS]
 ```
-You will be prompted to click the window that contains the puzzle. Once clicked, there is a one second delay until it begins solving. Once it is finished, you can click "New Game" or refresh the webpage to continue solving puzzles indefinitely. Pressing Ctrl + C in terminal will exit the program.
+You will be prompted to click the window that contains the puzzle. Once clicked, there is a one second delay until it begins solving. To solve another puzzle, you must rerun the script.
 
 ### Comand-Line Options
 
