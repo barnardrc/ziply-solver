@@ -41,29 +41,46 @@ class Board():
             self.board = board
             self.dim = board.shape
             self.cell_size = cell_size
+            self.cost_arr = None
+            self.g_cost_arr = None
+            self.f_cost_arr = None
+            
+            # Tuning params
+            self.h_cost_tuner = 1
+            self.g_cost_tuner = 0.45
             
             # Checkpoint handling
             self.current_checkpoint = 1
             self.current_checkpoint_coords = None
             self.update_current_checkpoint_coords()
             self.num_checkpoints = self.get_num_checkpoints()
+            self.checkpoints = None
+            self.get_list_of_checkpoints()
             
+            # History handling
             self.last_row = None
             self.last_col = None
             self.path = []
             
-            self.checkpoints = None
-            self.get_list_of_checkpoints()
+            # Solved state (not implemented)
             self.solved = False
         
+    # Updates checkpoint, the respective coordinates, and calls to update
+    # the intersection costs
     def increase_checkpoint(self):
         if not self.solved:
             self.current_checkpoint += 1
             self.update_current_checkpoint_coords()
+        self.update_h_cost()
+        self.update_g_cost_arr()
         
+    # Updates checkpoint, the respective coordinates, and calls to update
+    # the intersection costs
     def decrease_checkpoint(self):
         self.current_checkpoint -= 1
         self.update_current_checkpoint_coords()
+        self.update_h_cost()
+        self.update_g_cost_arr()
         
     def get_list_of_checkpoints(self):
         row, col = np.where(self.board > 0)
@@ -110,9 +127,116 @@ class Board():
         
         return is_adjacent
     
+    # Gets the total amount of checkpoints
     def get_num_checkpoints(self):
         return np.sum(self.board > 0)
+    
+    # Reset the cost array
+    def _reset_cost_arr(self):
+        H = self.dim[0]
+        W = self.dim[1]
+        self.cost_arr = np.ones((H, W))
+        
+    # Gets the respective coordinates of a value's location for two values
+    def _get_coords(self, p1: int, p2: int) -> tuple:
+        
+        if self.board.ndim < 2:
+            raise ValueError("Expected atleast 2 dimensions.")
+        
+        p1_coords = np.where(self.board == p1)
+        p2_coords = np.where(self.board == p2)
+        
+        # Unpacking array return from np.where, slicing to get the first
+        # 2 dims of location
+        p1_coords = list(zip(*p1_coords[:2]))
+        p2_coords = list(zip(*p2_coords[:2]))
+        
+        # Isolating coordinate tuples from lists before return
+        return p1_coords[0], p2_coords[0]
+    
+    # Gets each coordinate within a bounding box between two points
+    def _get_bounding_box(self, p1, p2):
+        bbox = []
+        
+        p1, p2 = self._get_coords(p1, p2)
+        
+        x1 = p1[0]
+        y1 = p1[1]
+        x2 = p2[0]
+        y2 = p2[1]
+        
+        start_x = min(x1, x2)
+        end_x = max(x1, x2)
+        start_y = min(y1, y2)
+        end_y = max(y1, y2)
 
+        for x in range(start_x, end_x + 1):
+            for y in range(start_y, end_y + 1):
+                coords = (x, y)
+                bbox.append(coords)
+
+        
+        return bbox
+    
+    # Increment values in array for each occurence of a coordinate
+    def _increment_cost(self, coords: list):
+        for coord in coords:
+            self.cost_arr[coord[0], coord[1]] += 1
+            
+    # Calculates the cost of a cell based on how many bounding boxes
+    # intersect there.
+    def update_intersection_costs(self):
+        # Reset the cost array each time its recalculated
+        self._reset_cost_arr()
+
+        # current_checkpoint is decreased by 1 here, because it represents
+        # the current target, and the intersection doesn't need to update
+        # until that target has been reached.
+        for i in range(self.current_checkpoint-1, self.num_checkpoints):
+            bbox = self._get_bounding_box(i, i+1)
+
+            self._increment_cost(bbox)
+        
+    def manhattan_dist(self, p1, p2):
+        
+        x1 = p1[0]
+        y1 = p1[1]
+        x2 = p2[0]
+        y2 = p2[1]
+        
+        return abs(y2 - y1) + abs(x2 - x1)
+    
+                
+    def update_h_cost(self):
+        self.update_intersection_costs()
+        self.cost_arr = np.around((self.cost_arr * 
+                         self.h_cost_tuner
+                         ), decimals=2)
+        
+    
+    def update_g_cost_arr(self):
+        H = self.dim[0]
+        W = self.dim[1]
+        
+        # reset array each time
+        self.g_cost_arr = np.zeros((H, W))
+        
+
+        for coord, _ in np.ndenumerate(self.board):
+            self.g_cost_arr[coord[0], coord[1]] =np.around((
+                self.manhattan_dist(self.current_checkpoint_coords, coord) * 
+                self.g_cost_tuner), decimals=2)
+
+        #print(self.g_cost_arr)
+    
+    def update_f_cost_arr(self):
+        H = self.dim[0]
+        W = self.dim[1]
+        
+        self.f_cost_arr = np.zeros((H, W), dtype=int)
+        
+        self.f_cost_arr = np.around(self.g_cost_arr + self.cost_arr, decimals=2)
+    
 class Draw:
     def __init__(self, board, canvas):
         # Global variables for the transparent layer and its Tkinter PhotoImage
@@ -126,6 +250,16 @@ class Draw:
         self.static_image_pil = None
         self.static_image_tk = None
         self.static_image_id = None
+        
+        # For cost image
+        self.cost_image_pil = None
+        self.cost_image_tk = None
+        self.cost_image_id = None
+        
+        # For g cost
+        self.g_cost_image_pil = None
+        self.g_cost_image_tk = None
+        self.g_cost_image_id = None
         
         # Canvas
         self.canvas = canvas
@@ -208,6 +342,87 @@ class Draw:
         self.transparent_image_id = self.canvas.create_image(0, 0, image=self.transparent_image_tk, anchor="nw", tags="transparent_layer")
         self.canvas.lower(self.transparent_image_id, "grid_lines") # Ensure transparent layer is below circles
     
+    #responsible for drawing the cost numbers
+    def draw_hcost_layer(self):
+        # responsible for drawing the h cost numbers and f cost numbers
+        H, W = self.board.dim
+        canvas_width = W * self.board.cell_size
+        canvas_height = H * self.board.cell_size
+        
+        # h cost font
+        cost_font_size = int(self.board.cell_size / 7)
+        cost_font = ImageFont.truetype("arial.ttf", cost_font_size)
+        
+        # f cost font
+        f_cost_font_size = int(self.board.cell_size / 6)
+        f_cost_font = ImageFont.truetype("arial.ttf", f_cost_font_size)
+        
+        temp_pil_image = Image.new("RGBA", (canvas_width, canvas_height), (0, 0, 0, 0))
+        draw_pil = ImageDraw.Draw(temp_pil_image)
+        
+        for r in range(H):
+            for c in range(W):
+                # H costs
+                cost_value = self.board.cost_arr[r, c]
+                text_x = (c + 1) * self.board.cell_size - 5
+                text_y = r * self.board.cell_size + 5
+                draw_pil.text((text_x, text_y), str(cost_value), fill="blue", 
+                              font=cost_font, anchor="rt")
+        
+        for r in range(H):
+            for c in range(W):
+                # f costs
+                f_cost_value = self.board.f_cost_arr[r, c]
+                text_to_draw = str(f_cost_value)
+                # No ct align :(
+                text_width = draw_pil.textlength(text_to_draw, font=f_cost_font)
+                text_x = (c * self.board.cell_size + self.board.cell_size / 2) - (text_width / 2)
+                text_y = r * self.board.cell_size
+                draw_pil.text((text_x, text_y), str(f_cost_value), fill="black", 
+                              font=f_cost_font)
+        
+        # Update the canvas
+        self.cost_image_pil = temp_pil_image
+        self.cost_image_tk = ImageTk.PhotoImage(self.cost_image_pil)
+    
+        if self.cost_image_id is None:
+            self.cost_image_id = self.canvas.create_image(0, 0, image=self.cost_image_tk, anchor="nw", tags="cost_layer")
+            self.canvas.lower(self.cost_image_id, "grid_lines")
+        else:
+            self.canvas.itemconfig(self.cost_image_id, image=self.cost_image_tk)
+    
+    #responsible for drawing the g cost numbers
+    def draw_gcost_layer(self):
+        # responsible for drawing the g cost numbers
+        H, W = self.board.dim
+        canvas_width = W * self.board.cell_size
+        canvas_height = H * self.board.cell_size
+        
+        cost_font_size = int(self.board.cell_size / 7)
+        cost_font = ImageFont.truetype("arial.ttf", cost_font_size)
+        
+        temp_pil_image = Image.new("RGBA", (canvas_width, canvas_height), (0, 0, 0, 0))
+        draw_pil = ImageDraw.Draw(temp_pil_image)
+        
+        for r in range(H):
+            for c in range(W):
+                # G costs
+                g_cost_value = self.board.g_cost_arr[r, c]
+                text_gx = c * self.board.cell_size + 5
+                text_gy = r * self.board.cell_size + 5
+                draw_pil.text((text_gx, text_gy), str(g_cost_value), 
+                              fill="green", font=cost_font, anchor="lt")
+                
+        # Update the canvas
+        self.g_cost_image_pil = temp_pil_image
+        self.g_cost_image_tk = ImageTk.PhotoImage(self.g_cost_image_pil)
+    
+        if self.g_cost_image_id is None:
+            self.g_cost_image_id = self.canvas.create_image(0, 0, image=self.g_cost_image_tk, anchor='nw', tags="gcost_layer")
+            self.canvas.lower(self.g_cost_image_id, "grid_lines")
+        else:
+            self.canvas.itemconfig(self.g_cost_image_id, image=self.g_cost_image_tk)
+    
     def draw_path_layer(self, scale_factor = 2):
         
         line_color_rgba = self.get_rgba('mediumpurple', 255)
@@ -254,8 +469,6 @@ class Draw:
                 x1 = x_center + point_radius
                 y1 = y_center + point_radius
                 draw_pil.ellipse((x0, y0, x1, y1), fill=line_color_rgba) # Use ellipse to draw the circle
-        
-        
         
         # Update the Tkinter PhotoImage from the modified PIL image
         self.transparent_image_pil = temp_pil_image.resize((canvas_width, canvas_height), Image.LANCZOS)
@@ -338,7 +551,15 @@ class Draw:
             if len(self.board.path) == 0 and (row, col) == start_point:
                 self.board.path.append((row, col))
                 self.board.increase_checkpoint()
-            
+                
+                # Update costs
+                self.board.update_h_cost()
+                self.board.update_f_cost_arr()
+                
+                # Draw cost layers
+                self.draw_hcost_layer()
+                self.draw_gcost_layer()
+                
             # Store the initial cell
             self.board.update_last_coords(row, col)
             
@@ -362,6 +583,15 @@ class Draw:
         # Check if dragging into new grid space
         if row != self.board.last_row or col != self.board.last_col:
             
+            # Update cost layers
+            self.board.update_h_cost()
+            self.board.update_f_cost_arr()
+            # G cost only updated on new checkpoint
+            
+            # Draw cost layers
+            self.draw_hcost_layer()
+
+            
             # The is_adjacent check needs to check against the last drawn path coord
             adjacent = self.board.is_adjacent(row, col)
             
@@ -371,6 +601,11 @@ class Draw:
                 # Check if moved off of checkpoint
                 if self.board.is_checkpoint((self.board.last_row, self.board.last_col), 1):
                     self.board.decrease_checkpoint()
+                    self.draw_gcost_layer()
+                    self.board.update_f_cost_arr()
+                    
+                    # Draw cost layers
+                    self.draw_hcost_layer()
                 
                 
                 self.board.path.pop()
@@ -391,6 +626,7 @@ class Draw:
                     ):
                     return
                 
+                # Moved onto checkpoint
                 elif (self.board.in_checkpoints((row, col)) and 
                       self.board.is_checkpoint((row, col))
                     ):
@@ -399,11 +635,17 @@ class Draw:
                     self.board.update_last_coords(row, col)
                     self.board.increase_checkpoint()
                     
+                    # Update g cost
+                    self.draw_gcost_layer()
+                    self.board.update_f_cost_arr()
+                    self.draw_hcost_layer()
+                    
                 else:
                     self.board.path.append((row, col))
                     self.draw_path_layer() # Redraw the path with the new segment
                     self.board.update_last_coords(row, col)
-                    
+            
+
                     
     def on_drag_release(self, event):
         # Reset last_row/col so that the next drag starts fresh
@@ -441,18 +683,18 @@ def main():
     if random_board:
         height = 6
         width = 6
-        num_checkpoints = height * width // 4
+        num_checkpoints = 8
     
         board = generate_random_board(height, width, num_checkpoints)
         
     else:
-        board = np.array([[0, 2, 0, 0, 0, 0],
-                        [0, 0, 0, 3, 4, 0],
-                        [0, 0, 1, 0, 0, 0],
-                        [0, 0, 0, 0, 0, 5],
-                        [0, 0, 7, 6, 0, 0],
-                        [8, 0, 0, 0, 0, 0]])
-    
+        board = np.array([[6, 0, 0, 0, 0, 7],
+                         [0, 0, 0, 0, 0, 0],
+                         [0, 0, 0, 3, 0, 0],
+                         [5, 4, 0, 0, 1, 8],
+                         [0, 0, 0, 0, 0, 0],
+                         [0, 0, 0, 2, 0, 0]])
+                            
     board = Board(board)
     # Setup Tkinter Window
     root = tk.Tk()
@@ -468,11 +710,11 @@ def main():
     view_controller.draw_static_board_elements()
     view_controller.create_transparent_layer() # Initialize the transparent layer after canvas is set up
     
-    
     # Bind the drag events
     view_controller.canvas.bind("<Button-1>", view_controller.on_drag_start)
     view_controller.canvas.bind("<B1-Motion>", view_controller.on_drag_motion)
     view_controller.canvas.bind("<ButtonRelease-1>", view_controller.on_drag_release)
+    
     
     root.mainloop()
     
