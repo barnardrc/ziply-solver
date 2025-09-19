@@ -135,7 +135,7 @@ class Board():
     def _reset_cost_arr(self):
         H = self.dim[0]
         W = self.dim[1]
-        self.cost_arr = np.ones((H, W))
+        self.cost_arr = np.zeros((H, W))
         
     # Gets the respective coordinates of a value's location for two values
     def _get_coords(self, p1: int, p2: int) -> tuple:
@@ -159,7 +159,7 @@ class Board():
         bbox = []
         
         p1, p2 = self._get_coords(p1, p2)
-        
+
         x1 = p1[0]
         y1 = p1[1]
         x2 = p2[0]
@@ -193,8 +193,8 @@ class Board():
         # the current target, and the intersection doesn't need to update
         # until that target has been reached.
         for i in range(self.current_checkpoint-1, self.num_checkpoints):
+            
             bbox = self._get_bounding_box(i, i+1)
-
             self._increment_cost(bbox)
         
     def manhattan_dist(self, p1, p2):
@@ -221,7 +221,6 @@ class Board():
         # reset array each time
         self.g_cost_arr = np.zeros((H, W))
         
-
         for coord, _ in np.ndenumerate(self.board):
             self.g_cost_arr[coord[0], coord[1]] =np.around((
                 self.manhattan_dist(self.current_checkpoint_coords, coord) * 
@@ -242,11 +241,11 @@ class Draw:
         # Global variables for the transparent layer and its Tkinter PhotoImage
         self.transparent_image_pil = None
         self.transparent_image_tk = None
-        self.transparent_image_id = None # To reference the canvas item for the image
+        self.transparent_image_id = None
         self.animation_counter = 0
         self.circle_id_map = {}
 
-        # Globals for static board image
+        # For static board image
         self.static_image_pil = None
         self.static_image_tk = None
         self.static_image_id = None
@@ -256,7 +255,7 @@ class Draw:
         self.cost_image_tk = None
         self.cost_image_id = None
         
-        # For g cost
+        # For g cost image
         self.g_cost_image_pil = None
         self.g_cost_image_tk = None
         self.g_cost_image_id = None
