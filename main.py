@@ -84,10 +84,10 @@ def make_feeder(path, add_pt, timer_obj):
         """Timer callback – add one point per call."""
         nonlocal point_index
         if point_index < len(path):
-            add_pt(path[point_index])   # <-- pushes the point into the deque
+            add_pt(path[point_index])   # pushes the point into the deque
             point_index += 1
         else:
-            # all points have been sent – stop the timer
+            # stop time after all points sent
             timer_obj.stop()
         
     return feed_next_point
@@ -147,7 +147,8 @@ def main():
     # ----- argparser end ----- #
     
     check_environment()
-    
+    moves = None
+    visited = None
     print("Click the window containing the puzzle... ")
     wait_for_click()
     time.sleep(1)
@@ -183,9 +184,8 @@ def main():
         
         # Time solving the path
         startTime = time.time()
-        solution, moves, visited = solve_puzzle(
+        solution = solve_puzzle(
             board,
-            data.grid_locations,
             simulationLength
             )
         
@@ -201,7 +201,8 @@ def main():
             print(f"Solution path:\n{solution}\n")
             
         print(f"Time to solve: {elapsedTime:.3f}s")
-        print(f"Total moves: {moves}")
+        if moves is not None:
+            print(f"Total moves: {moves}")
         
         if solution is not None:
             data.grid_to_pixels(solution).get_absolute_coords()
@@ -224,7 +225,7 @@ def main():
                 # Create animation
                 anim, add_point = live_animation(
                         displayBoard,
-                        interval=50,               # ms between frames → ~25 fps
+                        interval=50,
                         line_width=2,
                         line_color='crimson',
                         line_alpha=0.5,
@@ -232,13 +233,14 @@ def main():
                         fps=12,
                         fade_frames = 100)
                 
-                # Fire timer ever 50ms
-                timer = anim._fig.canvas.new_timer(interval=50)
-                timer.add_callback(make_feeder(visited, add_point, timer))
-                timer.start()
-
-                plt.show()
-            
+                if visited is not None:
+                    # Fire timer ever 50ms
+                    timer = anim._fig.canvas.new_timer(interval=50)
+                    timer.add_callback(make_feeder(visited, add_point, timer))
+                    timer.start()
+    
+                    plt.show()
+                
         else:
             raise Exception("Lines already drawn - refresh the puzzle.\n If you keep getting this error, resize the window.")
             

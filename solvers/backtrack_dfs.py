@@ -8,7 +8,7 @@ Backtracking DFS Search algorithm
 
 @author: barna
 """
-
+import numpy as np
 
 def is_valid_backtrack_dfs(x, y, visited, n=6):
     """
@@ -18,9 +18,21 @@ def is_valid_backtrack_dfs(x, y, visited, n=6):
     """
     return 0 <= x < n and 0 <= y < n and (x, y) not in visited
 
-def solve_puzzle(board, coords, 
-                  simulationLength
+# Takes the board and returns the coordinates of checkpoints in order
+def get_ordered_checkpoints(board):
+    ordered_checkpoints = []
+    num_checkpoints = len(np.where(board > 0)[0])
+    for i in range(num_checkpoints):
+        cp_loc = (np.where(board == i+1))
+        r, c = cp_loc[0], cp_loc[1]
+        cp = list(zip(r, c))[0]
+        ordered_checkpoints.append(cp)
+    return ordered_checkpoints
+
+def solve_puzzle(board, simulationLength = None
                   ):
+    coords = get_ordered_checkpoints(board)
+    
     # Move set
     moves = {
         (-1, 0): "LEFT",
@@ -49,8 +61,9 @@ def solve_puzzle(board, coords,
         visited.add((x, y))
         
         # How many coords to save for playback of the algorithm
-        if recursions <= simulationLength:
-            visited_all.append((y, x))
+        if simulationLength:
+            if recursions <= simulationLength:
+                visited_all.append((y, x))
         
         # Initial completion condition - visiting all 36 spaces
         if visited_count == N * N:
@@ -104,7 +117,8 @@ def solve_puzzle(board, coords,
     
     if backtrack(start[0], start[1], 1, 1):
         print("Solved!")
-        return path, recursions, visited_all
+        return path
     
     print("No Solution")
+    
     return None, recursions

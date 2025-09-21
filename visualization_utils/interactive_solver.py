@@ -29,14 +29,16 @@ class Board():
     _instance = None
     
     # Singleton
-    def __new__(cls, board_array, cell_size=100):
+    def __new__(cls, board_array, cell_size=100, show_costs = False):
         if cls._instance is None:
             # Create a new instance if one doesn't exist
             cls._instance = super(Board, cls).__new__(cls)
         return cls._instance
     
-    def __init__(self, board = None, cell_size = 100):
+    def __init__(self, board = None, cell_size = 100, show_costs = False):
         if not hasattr(self, '_initialized'):
+            self.show_costs = show_costs
+            
             # Init board: a 2D numpy array
             self.board = board
             self.dim = board.shape
@@ -44,6 +46,9 @@ class Board():
             self.cost_arr = None
             self.g_cost_arr = None
             self.f_cost_arr = None
+            self.open_list = []
+            self.closed_list = []
+            
             
             # Tuning params
             self.h_cost_tuner = 1
@@ -52,8 +57,8 @@ class Board():
             # Checkpoint handling
             self.current_checkpoint = 1
             self.current_checkpoint_coords = None
-            self.update_current_checkpoint_coords()
             self.num_checkpoints = self.get_num_checkpoints()
+            self.update_current_checkpoint_coords()
             self.checkpoints = None
             self.get_list_of_checkpoints()
             
@@ -108,7 +113,7 @@ class Board():
         self.last_col = col
         
     def update_current_checkpoint_coords(self):
-        if self.current_checkpoint <= 8:
+        if self.current_checkpoint <= self.num_checkpoints:
             row, col = np.where(self.board == self.current_checkpoint)
             coords = list(zip(row, col))
         
@@ -116,7 +121,7 @@ class Board():
             self.current_checkpoint_coords = coords[0]
     
     def get_current_checkpoint_coords(self):
-        if self.current_checkpoint < self.num_checkpoints:
+        if self.current_checkpoint <= self.num_checkpoints:
             return self.current_checkpoint_coords
         
     def is_adjacent(self, row, col):
@@ -209,7 +214,7 @@ class Board():
                 
     def update_h_cost(self):
         self.update_intersection_costs()
-        self.cost_arr = np.around((self.cost_arr * 
+        self.cost_arr = np.around((self.cost_arr *
                          self.h_cost_tuner
                          ), decimals=2)
         
@@ -244,7 +249,7 @@ class Draw:
         self.transparent_image_id = None
         self.animation_counter = 0
         self.circle_id_map = {}
-
+        
         # For static board image
         self.static_image_pil = None
         self.static_image_tk = None
@@ -260,12 +265,20 @@ class Draw:
         self.g_cost_image_tk = None
         self.g_cost_image_id = None
         
+        # For open list image
+        # For g cost image
+        self.open_pil = None
+        self.open_tk = None
+        self.open_id = None
+        
         # Canvas
         self.canvas = canvas
         
         # Board
         self.board = board
-      
+        
+        self.show_costs = board.show_costs
+        
     # Initial drawing of the board (grid, circles, numbers)
     def draw_board(self):
         H, W = self.board.dim
@@ -421,11 +434,12 @@ class Draw:
             self.canvas.lower(self.g_cost_image_id, "grid_lines")
         else:
             self.canvas.itemconfig(self.g_cost_image_id, image=self.g_cost_image_tk)
-    
+            
     def draw_path_layer(self, scale_factor = 2):
         
         line_color_rgba = self.get_rgba('mediumpurple', 255)
-        square_color_rgba = (75, 0, 130, 20)
+        open_square_color_rgba = (155, 60, 90, 80)
+        closed_square_color_rgba = (0, 50, 100, 100)
         
         if self.transparent_image_pil is None:
             self.create_transparent_layer()
@@ -435,19 +449,31 @@ class Draw:
         canvas_height = H * self.board.cell_size
         
         # Clear the previous drawings on the PIL image
-        #transparent_image_pil = Image.new("RGBA", transparent_image_pil.size, (0, 0, 0, 0))
         temp_pil_image = Image.new("RGBA", (canvas_width * scale_factor, canvas_height * scale_factor), (0, 0, 0, 0))
         draw_pil = ImageDraw.Draw(temp_pil_image)
         
         # Draw the transparent squares for each cell in the path
+        directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+        
         for row, col in self.board.path:
-            x0 = col * self.board.cell_size * scale_factor
-            y0 = row * self.board.cell_size * scale_factor
-            x1 = (col + 1) * self.board.cell_size * scale_factor
-            y1 = (row + 1) * self.board.cell_size * scale_factor
-            
-            draw_pil.rectangle([x0, y0, x1, y1], fill=square_color_rgba)
-            
+            for direc in directions:
+                new_row = row + direc[0]
+                new_col = col + direc[1]
+                x0 = new_col * self.board.cell_size * scale_factor
+                y0 = new_row * self.board.cell_size * scale_factor
+                x1 = (new_col + 1) * self.board.cell_size * scale_factor
+                y1 = (new_row + 1) * self.board.cell_size * scale_factor
+                
+                draw_pil.rectangle([x0, y0, x1, y1], fill=open_square_color_rgba)
+                
+        for row, col in self.board.path:
+                x0 = col * self.board.cell_size * scale_factor
+                y0 = row * self.board.cell_size * scale_factor
+                x1 = (col + 1) * self.board.cell_size * scale_factor
+                y1 = (row + 1) * self.board.cell_size * scale_factor
+                
+                draw_pil.rectangle([x0, y0, x1, y1], fill=closed_square_color_rgba)
+        
         # Draw the continuous line over the squares 
         if len(self.board.path) > 1:
             # Create a list of pixel coordinates from the board.path's cell coordinates
@@ -531,7 +557,7 @@ class Draw:
         else:
             # Delete the circle when the animation is done
             self.canvas.delete(circle_id)
-    
+        
     def on_drag_start(self, event):
         col = event.x // self.board.cell_size
         row = event.y // self.board.cell_size
@@ -550,14 +576,15 @@ class Draw:
             if len(self.board.path) == 0 and (row, col) == start_point:
                 self.board.path.append((row, col))
                 self.board.increase_checkpoint()
-                
-                # Update costs
-                self.board.update_h_cost()
-                self.board.update_f_cost_arr()
-                
-                # Draw cost layers
-                self.draw_hcost_layer()
-                self.draw_gcost_layer()
+                self.board.closed_list.append((row, col))
+                if self.show_costs:
+                    # Update costs
+                    self.board.update_h_cost()
+                    self.board.update_f_cost_arr()
+                    
+                    # Draw cost layers
+                    self.draw_hcost_layer()
+                    self.draw_gcost_layer()
                 
             # Store the initial cell
             self.board.update_last_coords(row, col)
@@ -582,13 +609,14 @@ class Draw:
         # Check if dragging into new grid space
         if row != self.board.last_row or col != self.board.last_col:
             
-            # Update cost layers
-            self.board.update_h_cost()
-            self.board.update_f_cost_arr()
-            # G cost only updated on new checkpoint
-            
-            # Draw cost layers
-            self.draw_hcost_layer()
+            if self.show_costs:
+                # Update cost layers
+                self.board.update_h_cost()
+                self.board.update_f_cost_arr()
+                # G cost only updated on new checkpoint
+                
+                # Draw cost layers
+                self.draw_hcost_layer()
 
             
             # The is_adjacent check needs to check against the last drawn path coord
@@ -600,11 +628,12 @@ class Draw:
                 # Check if moved off of checkpoint
                 if self.board.is_checkpoint((self.board.last_row, self.board.last_col), 1):
                     self.board.decrease_checkpoint()
-                    self.draw_gcost_layer()
-                    self.board.update_f_cost_arr()
-                    
-                    # Draw cost layers
-                    self.draw_hcost_layer()
+                    if self.show_costs:
+                        self.draw_gcost_layer()
+                        self.board.update_f_cost_arr()
+                        
+                        # Draw cost layers
+                        self.draw_hcost_layer()
                 
                 
                 self.board.path.pop()
@@ -618,6 +647,7 @@ class Draw:
             
             # Now check if it is a valid move space
             elif adjacent and (row, col) not in self.board.path and self.board.current_checkpoint < 9:
+                # Color code adjacent spaces
                 
                 # Then Check if it is a checkpoint space
                 if (self.board.in_checkpoints((row, col)) and 
@@ -634,10 +664,11 @@ class Draw:
                     self.board.update_last_coords(row, col)
                     self.board.increase_checkpoint()
                     
-                    # Update g cost
-                    self.draw_gcost_layer()
-                    self.board.update_f_cost_arr()
-                    self.draw_hcost_layer()
+                    if self.show_costs:
+                        # Update g cost
+                        self.draw_gcost_layer()
+                        self.board.update_f_cost_arr()
+                        self.draw_hcost_layer()
                     
                 else:
                     self.board.path.append((row, col))
@@ -680,21 +711,21 @@ def main():
     # Params for random board
     random_board = False
     if random_board:
-        height = 6
-        width = 6
-        num_checkpoints = 8
+        height = 8
+        width = 8
+        num_checkpoints = (height * width) // 6
     
         board = generate_random_board(height, width, num_checkpoints)
         
     else:
-        board = np.array([[6, 0, 0, 0, 0, 7],
-                         [0, 0, 0, 0, 0, 0],
-                         [0, 0, 0, 3, 0, 0],
-                         [5, 4, 0, 0, 1, 8],
-                         [0, 0, 0, 0, 0, 0],
-                         [0, 0, 0, 2, 0, 0]])
+        board = np.array([[0, 0, 0, 0, 5, 0],
+         [6, 0, 0, 0, 0, 0],
+         [0, 0, 0, 2, 3, 0],
+         [0, 0, 8, 0, 0, 0],
+         [7, 0, 1, 0, 0, 4],
+         [0, 0, 0, 0, 0, 0]])
                             
-    board = Board(board)
+    board = Board(board, show_costs = False)
     # Setup Tkinter Window
     root = tk.Tk()
     root.title("Interactive Board")

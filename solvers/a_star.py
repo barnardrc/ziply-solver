@@ -26,8 +26,9 @@ class Cell:
         self.f = float('inf')
         self.g = float('inf')
         self.h = 0
-
-
+        self.time = 0
+        
+        
 def get_loc(board, target):
     coords = np.where(board == target)
     row = coords[0][0]
@@ -106,22 +107,31 @@ def a_star_search(grid, src, dest, next_checkpoint_value, visited_coords,
     if is_destination(src[0], src[1], dest):
         print("Already at destination")
         return [src]
-        
+    
+    # init closed list. All False because none are visited in the beginning
     closed_list = [[False for _ in range(COL)] for _ in range(ROW)]
+    
+    # Init cell objects for each cell on the board.
     cell_details = [[Cell() for _ in range(COL)] for _ in range(ROW)]
-
+    
+    # declare i, j - the source cell coordinates
     i, j = src
+    # init costs
     cell_details[i][j].f = 0
     cell_details[i][j].g = 0
     cell_details[i][j].h = 0
+    # declare parent coords
     cell_details[i][j].parent_i = i
     cell_details[i][j].parent_j = j
     
+    # init open list
     open_list = []
     heapq.heappush(open_list, (0.0, i, j))
     
     while len(open_list) > 0:
+        # Remove and return the open list from the heap
         p = heapq.heappop(open_list)
+        
         i, j = p[1], p[2]
         closed_list[i][j] = True
         
@@ -134,8 +144,8 @@ def a_star_search(grid, src, dest, next_checkpoint_value, visited_coords,
             
             if (is_valid(new_i, new_j) and
                 is_unblocked(grid, new_i, new_j, next_checkpoint_value, 
-                             visited_coords) and
-                not closed_list[new_i][new_j]):
+                             visited_coords) and not 
+                closed_list[new_i][new_j]):
                 
                 if is_destination(new_i, new_j, dest):
                     cell_details[new_i][new_j].parent_i = i
@@ -178,6 +188,7 @@ def solve_puzzle(board, dummy_coords = None, simulationLength = None):
     for i in range(2, total_checkpoints + 1):
         target = i
         next_loc = get_loc(board, target)
+
         
         if next_loc is None:
             print(f"Checkpoint {target} not found.")
@@ -192,7 +203,7 @@ def solve_puzzle(board, dummy_coords = None, simulationLength = None):
                                      next_loc, 
                                      target,
                                      visited_coords,
-                                     counter
+                                     counter,
                                      )
         
         if path_segment is not None:
