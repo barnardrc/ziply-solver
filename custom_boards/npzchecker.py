@@ -6,7 +6,7 @@ Created on Sun Sep 21 15:10:03 2025
 """
 import numpy as np
 
-dims_to_check = '7x7'
+dims_to_check = '8x8'
 
 # Prints the contents to console as easy copy-paste string format
 try:

@@ -6,7 +6,7 @@ Created on Sun Sep 21 14:33:46 2025
 """
 import numpy as np
 import random
-from solvers.backtrack_dfs import solve_puzzle
+from solvers.sat_solver import solve_puzzle
 import time
 
 def generate_random_board(height: int, width: int, num_checkpoints: int):
@@ -52,13 +52,11 @@ def main():
     
     H = 8
     W = 8
-    num_checkpoints = int((H*W) // 4.5)
+    num_checkpoints = 12
     
     folder_path = "custom_boards/"
     file_name = get_file_name(folder_path, H, W)
     print(file_name)
-    print(f"\nDimensions: {H}x{W}")
-    print(f"Number of Checkpoints: {num_checkpoints}\n")
     
     try:
         with np.load(file_name + '.npz', allow_pickle=True) as data:
@@ -72,13 +70,19 @@ def main():
 
     
     if random_board:
+        print(f"\nDimensions: {H}x{W}")
+        print(f"Number of Checkpoints: {num_checkpoints}\n")
         start_time = time.time()
         for i in range(amount_boards):
+            
             board = generate_random_board(H, W, num_checkpoints)
             print(f"Board #{i+1}: ", end = '')
             solution = solve_puzzle(board)
+            
             if solution is not None:
+                # Convert to 2 string for easy copy/paste
                 print(np.array2string(board, separator=', '))
+                # Convert to tuple for storing
                 new_board = tuple(board.flatten())
                 
                 # Check if board already exists
@@ -106,6 +110,6 @@ def main():
     
     # Save the updated list of arrays to the .npz file
     np.savez(file_name, *arrays_to_save)
-    print("Updated data saved to my_data.npz")
+    print(f"Updated data saved to {file_name}.npz")
         
 main()

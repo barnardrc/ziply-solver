@@ -674,7 +674,6 @@ class Draw:
                     self.board.path.append((row, col))
                     self.draw_path_layer() # Redraw the path with the new segment
                     self.board.update_last_coords(row, col)
-            
 
                     
     def on_drag_release(self, event):
