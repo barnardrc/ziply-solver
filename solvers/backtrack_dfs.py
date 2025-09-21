@@ -32,6 +32,7 @@ def get_ordered_checkpoints(board):
 def solve_puzzle(board, simulationLength = None
                   ):
     coords = get_ordered_checkpoints(board)
+    num_checkpoints = len(coords)
     
     # Move set
     moves = {
@@ -54,6 +55,7 @@ def solve_puzzle(board, simulationLength = None
     def backtrack(x, y, target, visited_count):
         nonlocal recursions
         nonlocal move_order
+        nonlocal num_checkpoints
         
         # Tracking recursions
         recursions += 1
@@ -85,8 +87,8 @@ def solve_puzzle(board, simulationLength = None
             
             # Special check if on 8 - if its not the last tile hit,
             # backtrack.
-            if (idx == 8 and 
-                target == 8 and 
+            if (idx == num_checkpoints and
+                target == num_checkpoints and
                 visited_count != N * N
                 ):
                 path.pop()
@@ -121,4 +123,4 @@ def solve_puzzle(board, simulationLength = None
     
     print("No Solution")
     
-    return None, recursions
+    return None

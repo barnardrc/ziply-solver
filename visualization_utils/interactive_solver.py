@@ -646,7 +646,7 @@ class Draw:
 
             
             # Now check if it is a valid move space
-            elif adjacent and (row, col) not in self.board.path and self.board.current_checkpoint < 9:
+            elif adjacent and (row, col) not in self.board.path and self.board.current_checkpoint <= self.board.num_checkpoints:
                 # Color code adjacent spaces
                 
                 # Then Check if it is a checkpoint space
@@ -718,12 +718,15 @@ def main():
         board = generate_random_board(height, width, num_checkpoints)
         
     else:
-        board = np.array([[0, 0, 0, 0, 5, 0],
-         [6, 0, 0, 0, 0, 0],
-         [0, 0, 0, 2, 3, 0],
-         [0, 0, 8, 0, 0, 0],
-         [7, 0, 1, 0, 0, 4],
-         [0, 0, 0, 0, 0, 0]])
+        board = np.array(
+[[ 0,  0,  0,  0,  9,  0,  0],
+ [ 0,  0,  0,  0,  0,  5,  0],
+ [ 8,  0,  0,  0, 10,  0,  0],
+ [ 0,  0,  0,  0,  0,  6,  0],
+ [ 0,  0,  0,  7,  0,  0,  0],
+ [ 0,  0,  4,  0,  0,  0,  0],
+ [ 3,  0,  2,  0,  0,  0,  1]]
+        )
                             
     board = Board(board, show_costs = False)
     # Setup Tkinter Window

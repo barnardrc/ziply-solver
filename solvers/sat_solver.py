@@ -124,7 +124,19 @@ def solve_puzzle(board = None, *args):
     else:
         print("Starting checkpoint (1) not found.")
         return None
-    #print(len(formula.clauses))
+    
+    # Sixth constraint: where the model must end
+    last_checkpoint_loc = checkpoints[-1]
+    last_time_step = total_time_steps - 1
+    if last_checkpoint_loc is not None:
+        # Only one variable corresponds to the path being at the last checkpoint 
+        # at the last time step. 
+        last_var = var_map[(last_checkpoint_loc[0], last_checkpoint_loc[1], last_time_step)]
+        
+        # Single clause. last_var must evaluate to true
+        formula.append([last_var])
+        
+    #print(len(f"Total Clauses: {formula.clauses}"))
     
     
     with Solver(bootstrap_with=formula.clauses) as s:
@@ -144,7 +156,7 @@ def solve_puzzle(board = None, *args):
             return solution_path
         
         else:
-            print("No solution found.")
+            print("No Solution")
             return None
         
 if __name__ == "__main__":
