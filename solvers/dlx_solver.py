@@ -129,40 +129,30 @@ class DLXSolver:
         return self._search()
 
 def build_dlx_matrix(board):
-    """
-    Convert Ziply into Exact Cover matrix.
-    - Constraint 1: each cell visited exactly once.
-    - Constraint 2: checkpoints appear in order.
-    """
     H, W = board.shape
     cells = [(r, c) for r in range(H) for c in range(W)]
     checkpoints = sorted([board[r, c] for r, c in cells if board[r, c] > 0])
-
-    col_count = len(cells) + len(checkpoints) - 1  # cells + ordering constraints
+    
+    # Columns = one per cell + one per checkpoint transition
+    col_count = len(cells) + (len(checkpoints) - 1)
     rows = []
     row_ids = []
-
-    # For each possible move (r1,c1) -> (r2,c2), build row
-    moves = [(-1,0),(1,0),(0,-1),(0,1)]
+    
     for r, c in cells:
-        for dr, dc in moves:
-            nr, nc = r + dr, c + dc
-            if 0 <= nr < H and 0 <= nc < W:
-                row = [0] * col_count
-                idx1 = r * W + c
-                idx2 = nr * W + nc
-                row[idx1] = 1
-                row[idx2] = 1
+        row = [0] * col_count
+        idx = r * W + c
+        row[idx] = 1  # must cover the cell once
 
-                # if move satisfies checkpoint order
-                cp1, cp2 = board[r, c], board[nr, nc]
-                if cp1 > 0 and cp2 > 0:
-                    if cp2 == cp1 + 1:
-                        row[len(cells) + cp1 - 1] = 1
-                rows.append(row)
-                row_ids.append(((r, c), (nr, nc)))
+        cp = board[r, c]
+        if cp > 1:  # enforce checkpoint transition (e.g. 1->2, 2->3)
+            transition_idx = len(cells) + (cp - 2)
+            row[transition_idx] = 1
 
+        rows.append(row)
+        row_ids.append((r, c))
+    
     return np.array(rows), row_ids
+
 
 def solve_puzzle(board, max_steps=1000):
     matrix, row_ids = build_dlx_matrix(board)
