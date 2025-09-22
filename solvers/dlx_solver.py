@@ -1,8 +1,3 @@
-"""
-Dancing Links (DLX) solver for Ziply puzzle.
-This is an alternative to DFS.
-"""
-
 import numpy as np
 
 class DLXNode:
@@ -26,6 +21,7 @@ class DLXSolver:
     def _build_links(self, matrix):
         cols = [ColumnNode(i) for i in range(len(matrix[0]))]
         root = ColumnNode("root")
+
         # link columns in a circle
         last = root
         for col in cols:
@@ -128,33 +124,51 @@ class DLXSolver:
     def solve(self):
         return self._search()
 
+
 def build_dlx_matrix(board):
+    """
+    Build DLX matrix for Ziply.
+    Columns:
+      - one for each cell
+      - one for each checkpoint transition
+    Rows:
+      - each valid move (cell1 -> cell2)
+    """
     H, W = board.shape
     cells = [(r, c) for r in range(H) for c in range(W)]
+    cell_index = {cell: i for i, cell in enumerate(cells)}
+
+    # checkpoint values in sorted order
     checkpoints = sorted([board[r, c] for r, c in cells if board[r, c] > 0])
-    
-    # Columns = one per cell + one per checkpoint transition
-    col_count = len(cells) + (len(checkpoints) - 1)
+    cp_required = [(checkpoints[i], checkpoints[i+1]) for i in range(len(checkpoints)-1)]
+
+    col_count = len(cells) + len(cp_required)  # cells + transitions
     rows = []
     row_ids = []
-    
+
+    moves = [(-1,0),(1,0),(0,-1),(0,1)]
     for r, c in cells:
-        row = [0] * col_count
-        idx = r * W + c
-        row[idx] = 1  # must cover the cell once
+        for dr, dc in moves:
+            nr, nc = r + dr, c + dc
+            if 0 <= nr < H and 0 <= nc < W:
+                row = [0] * col_count
 
-        cp = board[r, c]
-        if cp > 1:  # enforce checkpoint transition (e.g. 1->2, 2->3)
-            transition_idx = len(cells) + (cp - 2)
-            row[transition_idx] = 1
+                # must cover both cells
+                row[cell_index[(r,c)]] = 1
+                row[cell_index[(nr,nc)]] = 1
 
-        rows.append(row)
-        row_ids.append((r, c))
-    
+                # checkpoint transition constraint
+                cp1, cp2 = board[r, c], board[nr, nc]
+                if cp1 > 0 and cp2 > 0 and (cp1, cp2) in cp_required:
+                    row[len(cells) + cp_required.index((cp1,cp2))] = 1
+
+                rows.append(row)
+                row_ids.append(((r, c), (nr, nc)))
+
     return np.array(rows), row_ids
 
 
-def solve_puzzle(board, max_steps=1000):
+def solve_puzzle(board):
     matrix, row_ids = build_dlx_matrix(board)
     solver = DLXSolver(matrix, row_ids)
     result = solver.solve()
