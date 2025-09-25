@@ -180,7 +180,7 @@ def main():
         #print(f"final grid locations: {data.grid_locations}")
         
         board, displayBoard = populate_gameboard(data.grid_locations, board)
-
+        print(data.grid_locations)
         
         # Time solving the path
         startTime = time.time()
@@ -242,7 +242,8 @@ def main():
                     plt.show()
                 
         else:
-            raise Exception("Lines already drawn - refresh the puzzle.\n If you keep getting this error, resize the window.")
+            raise Exception("Lines already drawn - refresh the puzzle.\n \
+                            If you keep getting this error, resize the window.")
             
             
     except KeyboardInterrupt:

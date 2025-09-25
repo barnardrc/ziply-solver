@@ -315,8 +315,14 @@ class GameData:
                 
         if self.ts:
             print()
-            #print(f"all x in edges: {xs}")
-            #print(f"all y in edges: {ys}")
+            print(f"all x in edges: {xs}")
+            print(f"all y in edges: {ys}")
+            print()
+            print(f"xmin: {xmin}")
+            print(f"ymin: {ymin}")
+            print(f"xmax: {xmax}")
+            print(f"ymax: {ymax}")
+            
         
         return self
     
@@ -333,13 +339,16 @@ class GameData:
             y_rel = int(y - self.dimensions[0])
             r_shrink = max(int(r) - pad, 1)  # ensure radius is positive
             cv.circle(mask, (x_rel, y_rel), r_shrink, 255, thickness=-1)
-    
+            
         # Apply mask
+        print(self.image.shape)
         if len(self.image.shape) == 3 and self.image.shape[2] == 3:
+            print("Performing IF statements ")
             mask_3ch = cv.merge([mask, mask, mask])
             masked_image = cv.bitwise_and(self.image, mask_3ch)
             
         else:
+            print("Performing ELSE statements ")
             masked_image = cv.bitwise_and(self.image, mask, mask=mask)
     
         self.image = masked_image
@@ -379,7 +388,7 @@ class GameData:
             raise ValueError(f"Expected 8 circles, received {lengthOfArray}")
             
             
-    def extract_square_images(self):
+    def extract_square_images(self, data_collection = False):
         self.ocr_captures = [
             self.image[
                 int(max(0, top - self.dimensions[0])) : int(min(height + top - self.dimensions[0], self.image.shape[0])),
@@ -387,7 +396,11 @@ class GameData:
                     ] 
                 for left, top, width, height in self.squares
             ]
-        
+        if data_collection:
+            file_path = r'C:\Users\barna\Documents\ziply-solver\OCR Model\train\img'
+            for i, crop_img in enumerate(self.ocr_captures):
+                cv.imwrite(f'{file_path}{i}.png', crop_img)
+            
         if self.ts:
             for i, crop_img in enumerate(self.ocr_captures):
                 image = np.ascontiguousarray(crop_img, dtype=np.uint8)

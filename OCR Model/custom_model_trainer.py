@@ -14,8 +14,8 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
 from tensorflow.keras.callbacks import EarlyStopping
 
-data_dir = r"locationOfInputData"
-save_loc = r"locationToSave"
+data_dir = r"C:\Users\barna\Documents\ziply-solver\OCR Model\train"
+save_loc = r"C:\Users\barna\Documents\ziply-solver\OCR Model"
 img_size = 28
 
 X = []
@@ -77,4 +77,4 @@ history = model.fit(
     validation_data = (X_val, y_val)
     )
 
-model.save(f"{save_loc}/mnist_custom_digits.keras")
+model.save(f"{save_loc}/mnist_custom_digits01.keras")

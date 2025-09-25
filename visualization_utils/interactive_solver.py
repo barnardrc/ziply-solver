@@ -10,10 +10,9 @@ This script essentially builds the ziply game board locally with passed arrays.
 
 There is currently a random board generator, but if used, it is most likely
 to create unsolvable boards.
-For now, your best bet is to run the main solver script with -dc argument to show the
-coords on a solvable board on ziply game, then paste those over here in this main.
-
-There is currently a solvable 6x6 populated.
+For now, you can either run the solver with arg -dc to show coords for a 
+solvable puzzle on ziply game, or you can use npzchecker.py in 
+custom_boards to show generated boards for each available dimension
 
 @author: barna
 """
@@ -282,16 +281,31 @@ class Draw:
     # Initial drawing of the board (grid, circles, numbers)
     def draw_board(self):
         H, W = self.board.dim
+        border_width = 3
         grid_line_width = 2.3
+        x_end = W * self.board.cell_size  # Total canvas width
+        y_end = H * self.board.cell_size  # Total canvas height
+        
+        
         
         # Draw grid lines with Tkinter
-        for i in range(H + 1):
+
+        
+        
+        # interior grid lines
+        for i in range(H):
             self.canvas.create_line(0, i * self.board.cell_size, W * self.board.cell_size, i * self.board.cell_size,
                                fill="#cccacf", width=grid_line_width, tags="grid_lines")
-        for j in range(W + 1):
+        for j in range(W):
             self.canvas.create_line(j * self.board.cell_size, 0, j * self.board.cell_size, H * self.board.cell_size,
                                fill="#cccacf", width=grid_line_width, tags="grid_lines")
-            
+        
+        # exterior grid lines
+        self.canvas.create_line(0, border_width, x_end, border_width, fill = '#000000', width = border_width, tag = 'grid_lines')
+        self.canvas.create_line(0, y_end, x_end, y_end, fill = '#000000', width = 3, tag = 'grid_lines')
+        self.canvas.create_line(border_width, 0, border_width, y_end, fill = '#000000', width = 3, tag = 'grid_lines')
+        self.canvas.create_line(x_end, 0, x_end, y_end, fill = '#000000', width = 3, tag = 'grid_lines')
+        
     def draw_static_board_elements(self, scale_factor=2, circle_size=20):
     
         H, W = self.board.dim
@@ -710,24 +724,24 @@ def main():
     # Params for random board
     random_board = False
     if random_board:
-        height = 8
-        width = 8
-        num_checkpoints = (height * width) // 6
+        height = 16
+        width = 16
+        num_checkpoints = 32
     
         board = generate_random_board(height, width, num_checkpoints)
         
     else:
         board = np.array(
-[[ 0,  0,  0,  0,  9,  0,  0],
- [ 0,  0,  0,  0,  0,  5,  0],
- [ 8,  0,  0,  0, 10,  0,  0],
- [ 0,  0,  0,  0,  0,  6,  0],
- [ 0,  0,  0,  7,  0,  0,  0],
- [ 0,  0,  4,  0,  0,  0,  0],
- [ 3,  0,  2,  0,  0,  0,  1]]
+[[0, 0, 5, 0, 0, 0],
+ [0, 0, 0, 0, 0, 0],
+ [6, 0, 4, 0, 0, 3],
+ [0, 0, 8, 2, 0, 0],
+ [0, 0, 1, 0, 0, 0],
+ [7, 0, 0, 0, 0, 0]]
         )
                             
-    board = Board(board, show_costs = False)
+    board = Board(board, show_costs = False, cell_size = 100)
+    #print(np.array2string(board.board, separator= ', '))
     # Setup Tkinter Window
     root = tk.Tk()
     root.title("Interactive Board")
@@ -735,7 +749,7 @@ def main():
     H, W = board.dim
     canvas = tk.Canvas(root, width=W * board.cell_size, height=H * board.cell_size, 
                        bg="mint cream")
-    canvas.pack()
+    canvas.pack(padx = 150, pady = 150)
     view_controller = Draw(board, canvas)
     
     view_controller.draw_board()
