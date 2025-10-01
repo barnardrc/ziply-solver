@@ -7,19 +7,24 @@ Created on Sun Sep 21 14:22:03 2025
 import numpy as np
 from pysat.formula import CNF
 from pysat.solvers import Solver
+import sys
 
 # Takes the board and returns the coordinates of checkpoints in order
 def get_ordered_checkpoints(board):
     ordered_checkpoints = []
     num_checkpoints = len(np.where(board > 0)[0])
-    for i in range(num_checkpoints):
-        cp_loc = (np.where(board == i+1))
-        r, c = cp_loc[0], cp_loc[1]
-        cp = list(zip(r, c))[0]
-        ordered_checkpoints.append(cp)
-    return ordered_checkpoints
-
-
+    try:
+        for i in range(num_checkpoints):
+            cp_loc = (np.where(board == i+1))
+            r, c = cp_loc[0], cp_loc[1]
+            cp = list(zip(r, c))[0]
+            ordered_checkpoints.append(cp)
+        return ordered_checkpoints
+    
+    except Exception as e:
+        print(f"\nEXCEPTION:\nget_ordered_checkpoints failed with the following exception:\n{e}.\nDid you set board dimensions in main?\n")
+        sys.exit(1)
+        
 def solve_puzzle(board = None, *args):
 
     ROW = board.shape[0]

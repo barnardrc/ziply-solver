@@ -8,9 +8,17 @@ without intersecting visited nodes and requiring checkpoints in sequence.
 This code is intended to work cross-platform, however, linux users must be using
 x11 for pyautogui and mss, and otherwise is untested in that environment.
 
+At the beginning of this project, I used camel case for variables and 
+snake case for functions. I have since switched to using all snake_case
+when coding in Python. The switched conventions can still be seen, especially in
+game_data.py, which was the initial module of this program.
+
 @author: barna
 """
 # ----- Import Start ----- #
+# Silence info messages
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1' 
 
 # Force mpl backend
 import matplotlib
@@ -30,7 +38,8 @@ from compat import check_environment
 from visualization_utils.board_anim import live_animation
 from visualization_utils.intersection_heatmap import intersection_heatmap
 from game_data import GameData
-from solvers.backtrack_dfs import solve_puzzle
+from solvers.a_star_exp import solve_puzzle
+
 
 # ----- Import End ----- #
 
@@ -50,8 +59,8 @@ def wait_for_click():
     
     click_event.wait()
         
-def create_gameboard():
-    board = np.zeros((6, 6), dtype=int)
+def create_gameboard(H, W):
+    board = np.zeros((H, W), dtype=int)
     
     return board
 
@@ -93,6 +102,8 @@ def make_feeder(path, add_pt, timer_obj):
     return feed_next_point
 
 def main():
+
+    
     # ----- argparser ----- #
     
     parser = argparse.ArgumentParser(description="A solver for the Ziply directional graph puzzle.")
@@ -127,13 +138,21 @@ def main():
         dest='displayHeatmap',
         help="Show the heatmap of intersecting possible paths."
     )
+    parser.add_argument(
+        '-ts','--trouble-shoot', 
+        action='store_true',
+        dest='ts',
+        help="This mode largely gives a step by step of what is occuring\
+            for the OCR pipeline."
+    )
     # Change simulation length
     parser.add_argument(
         '-sl', '--sim-length',
         type=int,
         default=1000,
         dest='simulationLength',
-        help = "First SIMULATIONLENGTH coordinates will be simulated.")
+        help = "First SIMULATIONLENGTH coordinates will be simulated."
+    )
     
     args = parser.parse_args()
     
@@ -141,7 +160,8 @@ def main():
     displayAnimation = args.displayAnimation
     drawSolution = args.drawSolution
     displaySolutionCoords = args.displaySolutionCoords
-    simulationLength = args.simulationLength  # Will be 100 by default
+    ts = args.ts
+    simulationLength = args.simulationLength  # Will be 1000 by default
     print(f"Simulation will run for {simulationLength} coordinates.")
     
     # ----- argparser end ----- #
@@ -152,13 +172,13 @@ def main():
     print("Click the window containing the puzzle... ")
     wait_for_click()
     time.sleep(1)
+    tk_board = False
+    H = 6
+    W = 6
     
-
     try:
         data = (
-            GameData() # data pipeline
-                 #.toggle_ts_mode() # ts_mode largely provides a step by step
-                                    # of what is happening for pre-processing
+            GameData(H, W, ts, tk_board = tk_board) # data pipeline
                  .get_window_rect()
                  .window_capture()
                  .detect_circles()
@@ -174,13 +194,12 @@ def main():
                  .order_circles()
                  .pixels_to_grid()
          )
-        
         # Create the board and populate it with checkpoints
-        board = create_gameboard()
+        board = create_gameboard(H, W)
         #print(f"final grid locations: {data.grid_locations}")
         
         board, displayBoard = populate_gameboard(data.grid_locations, board)
-        print(data.grid_locations)
+        #print(data.grid_locations)
         
         # Time solving the path
         startTime = time.time()
@@ -201,11 +220,15 @@ def main():
             print(f"Solution path:\n{solution}\n")
             
         print(f"Time to solve: {elapsedTime:.3f}s")
+        
         if moves is not None:
             print(f"Total moves: {moves}")
         
         if solution is not None:
-            data.grid_to_pixels(solution).get_absolute_coords()
+            if isinstance(solution, tuple):
+                data.grid_to_pixels(solution[0]).get_absolute_coords()
+            else:
+                data.grid_to_pixels(solution).get_absolute_coords()
             
             # Run puzzle solving and solution drawing at the same time
             puzzle_thread = threading.Thread(
@@ -220,7 +243,7 @@ def main():
                 intersection_heatmap(displayBoard, data.grid_locations)
                 
                 plt.show()
-                
+            
             if displayAnimation:
                 # Create animation
                 anim, add_point = live_animation(

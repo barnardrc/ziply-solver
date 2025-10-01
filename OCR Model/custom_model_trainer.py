@@ -40,9 +40,9 @@ for digit_folder in os.listdir(data_dir):
         
 X = np.array(X)
 y = np.array(y)
-
+num_classes = 18
 # Convert y to categorical via one-hot encoding
-y = to_categorical(y, num_classes=8)
+y = to_categorical(y, num_classes=num_classes)
 
 # Split data into two groups: training and test
 X_train, X_val, y_train, y_val = train_test_split(X, y, test_size = 0.1, random_state = 42)
@@ -55,7 +55,7 @@ model = Sequential([
     MaxPooling2D((2, 2)),
     Flatten(),
     Dense(128, activation = 'relu'),
-    Dense(8, activation = 'softmax')
+    Dense(num_classes, activation = 'softmax')
     ])
 
 model.compile(optimizer = 'adam', loss = 'categorical_crossentropy', metrics = ['accuracy'])

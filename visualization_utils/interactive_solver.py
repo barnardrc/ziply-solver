@@ -106,7 +106,7 @@ class Board():
         
     def is_solved(self):
         return self.solved
-    
+        
     def update_last_coords(self, row, col):
         self.last_row = row
         self.last_col = col
@@ -453,7 +453,7 @@ class Draw:
         
         line_color_rgba = self.get_rgba('mediumpurple', 255)
         open_square_color_rgba = (155, 60, 90, 80)
-        closed_square_color_rgba = (0, 50, 100, 100)
+        closed_square_color_rgba = (194, 85, 190, 100)
         
         if self.transparent_image_pil is None:
             self.create_transparent_layer()
@@ -468,7 +468,9 @@ class Draw:
         
         # Draw the transparent squares for each cell in the path
         directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
-        
+
+        # Draw squares in the open list
+        """
         for row, col in self.board.path:
             for direc in directions:
                 new_row = row + direc[0]
@@ -479,7 +481,9 @@ class Draw:
                 y1 = (new_row + 1) * self.board.cell_size * scale_factor
                 
                 draw_pil.rectangle([x0, y0, x1, y1], fill=open_square_color_rgba)
-                
+        """
+        
+        # Draw squares in the closed list
         for row, col in self.board.path:
                 x0 = col * self.board.cell_size * scale_factor
                 y0 = row * self.board.cell_size * scale_factor
@@ -487,7 +491,7 @@ class Draw:
                 y1 = (row + 1) * self.board.cell_size * scale_factor
                 
                 draw_pil.rectangle([x0, y0, x1, y1], fill=closed_square_color_rgba)
-        
+            
         # Draw the continuous line over the squares 
         if len(self.board.path) > 1:
             # Create a list of pixel coordinates from the board.path's cell coordinates
@@ -501,14 +505,17 @@ class Draw:
             draw_pil.line(pixel_path, fill=line_color_rgba, width=40 * scale_factor, joint="curve")
             
             # Draw a circle at each point in the path
-            point_radius = 19.25 * scale_factor # Adjust the size as needed
+            point_radius = 19.25 * scale_factor
             for x_center, y_center in pixel_path:
                 x0 = x_center - point_radius
                 y0 = y_center - point_radius
                 x1 = x_center + point_radius
                 y1 = y_center + point_radius
                 draw_pil.ellipse((x0, y0, x1, y1), fill=line_color_rgba) # Use ellipse to draw the circle
-        
+
+
+                
+                
         # Update the Tkinter PhotoImage from the modified PIL image
         self.transparent_image_pil = temp_pil_image.resize((canvas_width, canvas_height), Image.LANCZOS)
         self.transparent_image_tk = ImageTk.PhotoImage(self.transparent_image_pil)
@@ -580,7 +587,7 @@ class Draw:
         self.animation_counter += 1
         self.animate_click_feedback(row, col)
         
-        # Only actually do anything in on_drag_start if its the first time dragging.
+        # On first time dragging.
         if len(self.board.path) == 0:
             start_point = self.board.get_current_checkpoint_coords()
             # If you click outside the board, do nothing
@@ -601,6 +608,22 @@ class Draw:
                     self.draw_gcost_layer()
                 
             # Store the initial cell
+            self.board.update_last_coords(row, col)
+        
+        # On clicking a visited checkpoint, reset the path to that point.
+        elif (self.board.in_checkpoints((row, col)) and 
+              (row, col) in self.board.path
+              ):
+            # Get clicked checkpoint and index of loc in path
+            cp = self.board.board[row, col]
+            idx = self.board.path.index((row, col))
+            
+            # pop all path after current loc
+            self.board.path[idx + 1:] = []   
+            # Reset checkpoint
+            self.board.current_checkpoint = cp + 1
+            self.board.update_current_checkpoint_coords()
+            self.draw_path_layer()
             self.board.update_last_coords(row, col)
             
         else:
@@ -661,7 +684,6 @@ class Draw:
             
             # Now check if it is a valid move space
             elif adjacent and (row, col) not in self.board.path and self.board.current_checkpoint <= self.board.num_checkpoints:
-                # Color code adjacent spaces
                 
                 # Then Check if it is a checkpoint space
                 if (self.board.in_checkpoints((row, col)) and 
@@ -732,12 +754,12 @@ def main():
         
     else:
         board = np.array(
-[[0, 0, 5, 0, 0, 0],
+[[0, 0, 0, 0, 1, 2],
+ [0, 0, 6, 7, 0, 0],
  [0, 0, 0, 0, 0, 0],
- [6, 0, 4, 0, 0, 3],
- [0, 0, 8, 2, 0, 0],
- [0, 0, 1, 0, 0, 0],
- [7, 0, 0, 0, 0, 0]]
+ [0, 0, 8, 0, 0, 3],
+ [5, 0, 0, 0, 0, 0],
+ [0, 0, 4, 0, 0, 0]]
         )
                             
     board = Board(board, show_costs = False, cell_size = 100)
@@ -749,7 +771,7 @@ def main():
     H, W = board.dim
     canvas = tk.Canvas(root, width=W * board.cell_size, height=H * board.cell_size, 
                        bg="mint cream")
-    canvas.pack(padx = 150, pady = 150)
+    canvas.pack(padx= 200, pady = 200)
     view_controller = Draw(board, canvas)
     
     view_controller.draw_board()

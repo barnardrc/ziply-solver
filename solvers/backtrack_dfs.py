@@ -26,7 +26,9 @@ def get_ordered_checkpoints(board):
         cp_loc = (np.where(board == i+1))
         r, c = cp_loc[0], cp_loc[1]
         cp = list(zip(r, c))[0]
+
         ordered_checkpoints.append(cp)
+
     return ordered_checkpoints
 
 def solve_puzzle(board, simulationLength = None

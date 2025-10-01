@@ -14,9 +14,15 @@ from utils import get_foreground_window
 from tensorflow import keras
 
 class GameData:
-    def __init__(self):
-        # debug mode
+    def __init__(self, H, W, ts = False, tk_board = True):
         self.ts = False
+        self.H = H
+        self.W = W
+        
+        # debug mode
+        if ts:
+            print("\n---------------DEBUG MODE--------------\n")
+            self.ts = ts
         
         # Predicion model
         self.model = keras.models.load_model("mnist_custom_digits.keras")
@@ -31,7 +37,7 @@ class GameData:
         self.cannyThreshold = 60
         
         # Padding in pixels to define the Region of Interest
-        self.roiThreshold = 160
+        self.roiThreshold = 250
         
         # These edges are that of the circles that are used to determine
         # the region of interest, not detected game edges
@@ -48,6 +54,7 @@ class GameData:
         
         self.pieces = None
         
+        self.tk_board = tk_board
         self.grid_locations = None
         self.dimensions = None
         self.image = None
@@ -62,12 +69,6 @@ class GameData:
         self.xFactor = None
         self.yFactor = None
         self.pixel_coords = None
-        
-    def toggle_ts_mode(self):
-        self.ts = not self.ts
-        if self.ts:
-            print("\n---------------DEBUG MODE--------------\n")
-        return self
         
     def get_window_rect(self):
         self.dimensions = get_foreground_window()
@@ -94,7 +95,7 @@ class GameData:
             cv.waitKey(0)
             
             # Save image in memory as array
-            self.image = np.array(sct_img)[:, :, :3]  # drop alpha channel if present
+            self.image = np.array(sct_img)[:, :, :3]
             
             if self.ts:
                 print(f"dimensions returned by get_window_rect: \n{self.dimensions}")
@@ -160,14 +161,16 @@ class GameData:
 
     # Cluster detection to further isoalte the circles within the game prior to
     # edge detection
-    def detect_clusters(self, expectedCircles = 8):
+    def detect_clusters(self, expectedCircles = 8, max_distance = 500):
+        
+        #if self.tk_board:
         #print(f"Before detect_clusters: {self.circles}")
         # Isolating x and y coords within the return from HoughCircles
         points = np.array([[x, y] for x, y, r in self.circles[0, :]])
         
         Z = linkage(points, method = 'average')
 
-        max_distance = 500
+        max_distance = max_distance
         labels = fcluster(Z, max_distance, criterion = 'distance')
         labelsFilter = self._get_most_common(labels, 2)
         
@@ -178,12 +181,16 @@ class GameData:
             print(f"\nFinal circle amount considered: {amtCircles}")
             print(f"labels for Clustering: {labels}")
             
-        if amtCircles != expectedCircles:
-            cv.destroyAllWindows()
-            raise ValueError(f"Expected {expectedCircles} Circles but received {amtCircles} Circles.")
+        #if amtCircles != expectedCircles:
+        #    cv.destroyAllWindows()
+        #    raise ValueError(f"Expected {expectedCircles} Circles but received {amtCircles} Circles.")
             
         return self
-    
+        
+        #else:
+        #    labels = [1 for i in range(len(self.circles))]
+        #    return self
+        
     # Get circle relative boundary to identify a region of interest, then increase
     # it by some threshold for follow on edge detection.
     def get_circle_region_bounds(self):
@@ -231,18 +238,24 @@ class GameData:
     
     # Takes a slice of self.image and stores it to self.image
     def get_roi(self):
+
         top, left, width, height = self.dimensions
         top, left, width, height = map(int, (top, left, width, height))
         
+
         # Clamp coordinates to the image bounds
         img_height, img_width = self.image.shape[:2]
         top = max(0, top)
         left = max(0, left)
         bottom = min(img_height, top + height)
         right = min(img_width, left + width)
-       
-        self.image = self.image[top:bottom, left:right]
         
+        if self.tk_board:
+            self.image = self.image[10:, :, :]
+            
+        else:
+            self.image = self.image[top:bottom, left:right]
+
         if self.ts:
             image = np.ascontiguousarray(np.array(self.image)[:, :, :3], dtype=np.uint8)
             print("\nDimensions used in getting the slice:")
@@ -299,7 +312,11 @@ class GameData:
         edges of the game board.
         [x, y, x, y]
         """
+        print("Edges before reshape:")
+        print(self.edges)
         self.edges = self.edges.reshape(-1, 4)
+        print("Edges after reshape:")
+        print(self.edges)
         # Slice into x's and y's
         xs = np.concatenate([self.edges[:, 0], self.edges[:, 2]])  # all x1 and x2
         ys = np.concatenate([self.edges[:, 1], self.edges[:, 3]])  # all y1 and y2
@@ -308,6 +325,7 @@ class GameData:
         ymin, ymax = ys.min(), ys.max()
         
         # Edges are redifined to mark the play space
+        y_check = xmax - xmin
         self.topEdge = ymin + self.yOffsetRel
         self.leftEdge = xmin + self.xOffsetRel
         self.rightEdge = xmax + self.xOffsetRel
@@ -343,12 +361,10 @@ class GameData:
         # Apply mask
         print(self.image.shape)
         if len(self.image.shape) == 3 and self.image.shape[2] == 3:
-            print("Performing IF statements ")
             mask_3ch = cv.merge([mask, mask, mask])
             masked_image = cv.bitwise_and(self.image, mask_3ch)
             
         else:
-            print("Performing ELSE statements ")
             masked_image = cv.bitwise_and(self.image, mask, mask=mask)
     
         self.image = masked_image
@@ -360,12 +376,10 @@ class GameData:
     
     # Take the circle coords and return the dimensions of the cooresponding
     # square for OCR capture
-    def get_squares(self, n: int = 8):
+    def get_squares(self):
         lengthOfArray = len(self.circles)
-        # Check length of array
-        if lengthOfArray == n:
-            #print(f"Passed into get_squares: {circleArray}")
-            captureArray = np.empty((n, 4), dtype=int)
+        try:
+            captureArray = np.empty((lengthOfArray, 4), dtype=int)
             
             for i, circle in enumerate(self.circles):
                 # pull out useful dimensions of circle
@@ -383,9 +397,9 @@ class GameData:
             self.squares = captureArray
             return self
         
-        else:
+        except Exception as e:
             cv.destroyAllWindows()
-            raise ValueError(f"Expected 8 circles, received {lengthOfArray}")
+            print(f"Error in get_squares: {e}")
             
             
     def extract_square_images(self, data_collection = False):
@@ -502,8 +516,8 @@ class GameData:
         """
         
         """
-        self.xFactor = (self.rightEdge - self.leftEdge) / 6
-        self.yFactor = (self.botEdge - self.topEdge) / 6
+        self.xFactor = (self.rightEdge - self.leftEdge) / self.H
+        self.yFactor = (self.botEdge - self.topEdge) / self.W
         self.grid_locations = []
         for i, item in enumerate(self.orderedCircles):
             x = int((item[0] - self.leftEdge) / self.xFactor)
@@ -515,6 +529,7 @@ class GameData:
     
     def grid_to_pixels(self, solutionPath):
         if solutionPath is not None:
+            print(solutionPath)
             shiftedPath = [(x + 0.5, y + 0.5) for x, y in solutionPath]
             self.pixel_coords = ([(x * self.xFactor, y * self.yFactor) 
                                   for x, y in shiftedPath]
