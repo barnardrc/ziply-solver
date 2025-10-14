@@ -20,7 +20,7 @@ An automated solver for the Ziply puzzle game using computer vision and various 
 
 ### Solving
 - The board is simulated as a 2D array.  
-- A depth-first search with backtracking finds the valid path through all checkpoints.  
+- A solver will find the valid path through all checkpoints.  
 - Grid coordinates are mapped back to pixel coordinates.  
 - `pyautogui` interacts with the browser to draw the solution automatically.
 
