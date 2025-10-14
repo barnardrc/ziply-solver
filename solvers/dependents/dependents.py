@@ -7,6 +7,21 @@ Created on Tue Sep 30 15:31:17 2025
 import numpy as np
 import numbers
 
+def get_checkpoint_vals_to_coords(board):
+    return sorted([(board[r, c], (r, c)) for r,c in np.ndindex(board.shape) if board[r, c] > 0])
+
+def get_ordered_checkpoints(board):
+    ordered_checkpoints = []
+    num_checkpoints = len(np.where(board > 0)[0])
+    for i in range(num_checkpoints):
+        cp_loc = (np.where(board == i+1))
+        r, c = cp_loc[0], cp_loc[1]
+        cp = list(zip(r, c))[0]
+
+        ordered_checkpoints.append(cp)
+
+    return ordered_checkpoints
+
 def get_closed_coords(dict_of_coords):
     """
 
