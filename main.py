@@ -34,15 +34,14 @@ import matplotlib.pyplot as plt
 import argparse
 
 # Local Modules
-from compat import check_environment
+from utils.dependents.compat import check_environment
 from visualization_utils.board_anim import live_animation
 from visualization_utils.intersection_heatmap import intersection_heatmap
 from game_data import GameData
-from solvers.a_star_exp import solve_puzzle
-
+from utils.cli_parser import parse_arguments
+from solvers.backwards_dfs import solve_puzzle
 
 # ----- Import End ----- #
-
 
 def wait_for_click():
     
@@ -102,59 +101,7 @@ def make_feeder(path, add_pt, timer_obj):
     return feed_next_point
 
 def main():
-
-    
-    # ----- argparser ----- #
-    
-    parser = argparse.ArgumentParser(description="A solver for the Ziply directional graph puzzle.")
-    
-    # Display animation that simulates the path the algorithm takes
-    parser.add_argument(
-        '-sa','--show-animation', 
-        action='store_true', 
-        dest='displayAnimation',
-        help="Enable the final path animation."
-    )
-    
-    # Draw solution in browser
-    parser.add_argument(
-        '-ns','--no-solution', 
-        action='store_false',
-        dest='drawSolution',
-        help="Disable drawing in the puzzle window."
-    )
-    
-    # Print solution coords to console
-    parser.add_argument(
-        '-dc','--display-coords', 
-        action='store_true',
-        dest='displaySolutionCoords',
-        help="Print the final solution coordinates to the console."
-    )
-    # Show heatmap of intersections
-    parser.add_argument(
-        '-hm','--show-heatmap', 
-        action='store_true',
-        dest='displayHeatmap',
-        help="Show the heatmap of intersecting possible paths."
-    )
-    parser.add_argument(
-        '-ts','--trouble-shoot', 
-        action='store_true',
-        dest='ts',
-        help="This mode largely gives a step by step of what is occuring\
-            for the OCR pipeline."
-    )
-    # Change simulation length
-    parser.add_argument(
-        '-sl', '--sim-length',
-        type=int,
-        default=1000,
-        dest='simulationLength',
-        help = "First SIMULATIONLENGTH coordinates will be simulated."
-    )
-    
-    args = parser.parse_args()
+    args = parse_arguments()
     
     displayHeatmap = args.displayHeatmap
     displayAnimation = args.displayAnimation
@@ -162,6 +109,7 @@ def main():
     displaySolutionCoords = args.displaySolutionCoords
     ts = args.ts
     simulationLength = args.simulationLength  # Will be 1000 by default
+    
     print(f"Simulation will run for {simulationLength} coordinates.")
     
     # ----- argparser end ----- #
@@ -205,7 +153,7 @@ def main():
         startTime = time.time()
         solution = solve_puzzle(
             board,
-            simulationLength
+            simulationLength = simulationLength
             )
         
         endTime = time.time()
@@ -265,8 +213,7 @@ def main():
                     plt.show()
                 
         else:
-            raise Exception("Lines already drawn - refresh the puzzle.\n \
-                            If you keep getting this error, resize the window.")
+            raise Exception("Lines already drawn - refresh the puzzle.\nIf you keep getting this error, resize the window.")
             
             
     except KeyboardInterrupt:

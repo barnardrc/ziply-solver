@@ -168,7 +168,7 @@ def build_dlx_matrix(board):
     return np.array(rows), row_ids
 
 
-def solve_puzzle(board):
+def solve_puzzle(board, simulationLength = None):
     matrix, row_ids = build_dlx_matrix(board)
     solver = DLXSolver(matrix, row_ids)
     result = solver.solve()

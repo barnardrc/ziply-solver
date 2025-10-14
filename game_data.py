@@ -312,11 +312,14 @@ class GameData:
         edges of the game board.
         [x, y, x, y]
         """
-        print("Edges before reshape:")
-        print(self.edges)
+        if self.ts:
+            print("Edges before reshape:")
+            print(self.edges)
         self.edges = self.edges.reshape(-1, 4)
-        print("Edges after reshape:")
-        print(self.edges)
+        
+        if self.ts:
+            print("Edges after reshape:")
+            print(self.edges)
         # Slice into x's and y's
         xs = np.concatenate([self.edges[:, 0], self.edges[:, 2]])  # all x1 and x2
         ys = np.concatenate([self.edges[:, 1], self.edges[:, 3]])  # all y1 and y2

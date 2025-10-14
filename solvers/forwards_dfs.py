@@ -13,7 +13,7 @@ import numpy as np
 def is_valid_backtrack_dfs(x, y, visited, n=6):
     """
     Checks that a move resulted in a position that is still within
-    the game board boundaries and that it has not been visited 
+    the game board boundaries and that it has not been visited
     yet (no intersecting previously visited positions).
     """
     return 0 <= x < n and 0 <= y < n and (x, y) not in visited
@@ -74,7 +74,7 @@ def solve_puzzle(board, simulationLength = None
             return True
         
         """
-        Checks if current space is the list of coords that cooresponds
+        Checks if current space is in the list of coords that cooresponds
         to the positions of the checkpoints. 
         """
         if (x, y) in coords:

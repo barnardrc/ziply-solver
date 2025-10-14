@@ -9,7 +9,7 @@ Manhattan distance A* Search Algorithm with checkpoints
 
 import numpy as np
 import heapq
-from solvers import flipper
+from solvers.dependents import flipper
 
 class VariableHandler:
     def __init__(self):

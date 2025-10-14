@@ -2,14 +2,36 @@
 """
 Created on Sun Sep 14 15:03:47 2025
 
-Manhattan distance A* Search Algorithm with checkpoints
+This algorithm strings together A* searches to find the shorted path between
+each pair of checkpoints.
+When a search fails, the following happens:
+    1. Delete the most recently completed path
+    2. try the same, failed checkpoint again
+    Once a path is successfully drawn,
+    3. continue filling the board from the initially failed checkpoint
+    Once the path reaches the final checkpoint,
+    4. go back to begin filling from the lowest checkpoint
+     (return to step 1 if any fail)
+    Once a checkpoint is reached that already has a path segment drawn,
+    5. break and return to step 4
+    
+    This continues until a non-blocking path is drawn between all checkpoints.
+    This assumes a solvable board.
 
 @author: barna
 """
 
-from solvers.dependents import Helper
+from solvers.dependents.dependents import (
+    get_closed_coords as gcc, 
+    get_loc, 
+    is_adjacent, 
+    is_within_board
+    )
+from solvers.dependents import flipper
+
 import numpy as np
 import heapq
+
 class VariableHandler:
     def __init__(self):
         self.counter = 0
@@ -163,7 +185,7 @@ def a_star_search(grid, src, dest, next_checkpoint_value, visited_coords,
                         
     return None
 
-def get_target(target_dict, total_checkpoints, start = 2):
+def get_min_target(target_dict, total_checkpoints, start = 2):
     missing_targets = []
     for i in range(start, total_checkpoints + 2):
         if i not in target_dict:
@@ -171,85 +193,98 @@ def get_target(target_dict, total_checkpoints, start = 2):
     
     return min(missing_targets)
 
+# Orders a dictionary by key value. Expepcts keys to be integers.
 def order_dict(xdict):
     return dict(sorted(xdict.items(), key=lambda item: int(item[0])))
 
+# Makes each path segment in the dictionary complete, going from one
+# checkpoint to the next, inclusive.
+def prepend_prev_last_item(xdict):
+    for i in range(2, len(xdict) + 1):
+        first_value = xdict[i][-1]
+        second_value = xdict[i+1]
+        
+        second_value.insert(0, first_value)
+
 def solve_puzzle(board, dummy_coords = None, simulationLength = None):
+    do_flipper = True
     counter = VariableHandler()
-    visited_coords = set(Helper.get_loc(board, 1))
+    visited_coords = set(get_loc(board, 1))
     total_checkpoints = np.sum(board > 0)
     target_to_path = {}
-    
-    # Starting location is checkpoint 1
-    current_loc = Helper.get_loc(board, 1)
-    
-    if current_loc is None:
-        print("Starting checkpoint not found.")
-        return
         
     start = 2
     max_iter = 100
     
     
     #print(f"total checkpoints: {total_checkpoints}")
-    target = get_target(target_to_path, total_checkpoints, start)
     iter_num = 0
-    while target <= total_checkpoints and iter_num < max_iter:
+    while len(target_to_path) < total_checkpoints - 1 and iter_num < max_iter:
+        target = get_min_target(target_to_path, total_checkpoints, start)
         
-        next_loc = Helper.get_loc(board, target)
-        
-        if next_loc is None:
-            print(f"Checkpoint {target} not found.")
+        while target <= total_checkpoints:
             
+            current_loc = get_loc(board, target - 1)
+            next_loc = get_loc(board, target)
             
-        print(f"Current Location: {target - 1}")
-        print(f"Target Location: {target}")
-        path_segment = a_star_search(board,
-                                     current_loc,
-                                     next_loc,
-                                     target,
-                                     visited_coords,
-                                     counter,
-                                     )
-        
-        if path_segment is not None:
-            # Append the path segment, but skip the first node (current_loc)
-            # to avoid duplicates
-            if target != 2:
-                target_to_path[target] = path_segment[1:]
-            else:
-                target_to_path[target] = path_segment[:]
-                
-            target = get_target(target_to_path, total_checkpoints, start)
-            attempt = 0
+            if current_loc is None:
+                return
             
-        else:
-            attempt += 1
-            print()
-            print(f"Failed to find a path to checkpoint {target}.")
-            print()
-            target_to_path = order_dict(target_to_path)
-            print(f"Dict after ordering: {target_to_path}")
-            try:
-                del_idx = target-attempt
-                deleted_path = target_to_path.pop(del_idx)
-                
-            except:
-                target_to_path.clear()
-            
-                
-            print(f"Deleted Path: {deleted_path}")
-            
-        # Get visited coords
-        visited_coords = Helper.get_closed_coords(target_to_path)
-        if len(visited_coords) == 0:
-            print("Dict successfully cleared and visited_coords is empty.")
-        #print(f"visited set: {visited_coords}")
+            if next_loc is None:
+                print(f"Checkpoint {target} not found.")
 
-        current_loc = Helper.get_loc(board, target - 1)
-        iter_num += 1
+            path_segment = a_star_search(board,
+                                         current_loc,
+                                         next_loc,
+                                         target,
+                                         visited_coords,
+                                         counter,
+                                         )
+            
+            if path_segment is not None:
+                # Append the path segment, but skip the first node (current_loc)
+                # to avoid duplicates
+                if target != 2:
+                    target_to_path[target] = path_segment[1:]
+                else:
+                    target_to_path[target] = path_segment[:]
+                    
+                target += 1
+                attempt = 0
+                
+                if target in target_to_path:
+                    visited_coords = gcc(target_to_path)
+                    break
+                
+            else:
+                attempt += 1
+                target_to_path = order_dict(target_to_path)
+                try:
+                    del_idx = target-attempt
+                    deleted_path = target_to_path.pop(del_idx)
+                    
+                except:
+                    target_to_path.clear()
+                
+            # Get visited coords
+            visited_coords = gcc(target_to_path)
+            #print(f"visited set: {visited_coords}")
+    
+            
+            iter_num += 1
+    
+    # Order for prepend
+    target_to_path = order_dict(target_to_path)
+
+    if do_flipper:
+        # Prepend for flipper (expects full paths all coords inclusive)
+        prepend_prev_last_item(target_to_path)
+        full_path = flipper.flip(board, target_to_path)
         
-    #print(target_to_path)
+    else:
+        full_path = gcc(target_to_path)
+    
+    
     loops = counter.get_counter()
     
-    return Helper.get_closed_coords(order_dict(target_to_path))
+    return full_path

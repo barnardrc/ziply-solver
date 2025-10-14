@@ -16,11 +16,12 @@ custom_boards to show generated boards for each available dimension
 
 @author: barna
 """
+
 import numpy as np
 import tkinter as tk
 from PIL import Image, ImageDraw, ImageTk, ImageColor, ImageFont # Import Pillow
 import random
-
+from custom_boards.npzchecker import get_boards
 
 # The game board class, responsible for tracking and communicating
 # the state of the game board
@@ -744,6 +745,7 @@ def generate_random_board(height: int, width: int, num_checkpoints: int):
 
 def main():
     # Params for random board
+    generated_boards = True
     random_board = False
     if random_board:
         height = 16
@@ -751,22 +753,32 @@ def main():
         num_checkpoints = 32
     
         board = generate_random_board(height, width, num_checkpoints)
+        title = 'Interactive Board'
+        
+    elif generated_boards:
+        all_boards = get_boards(dims_to_check = '6x6')
+        keys = list(all_boards.keys())
+        random_key = random.choice(keys)
+        
+        board = all_boards[random_key]
+        title = f'{random_key}'
         
     else:
         board = np.array(
-[[0, 0, 0, 0, 1, 2],
- [0, 0, 6, 7, 0, 0],
- [0, 0, 0, 0, 0, 0],
- [0, 0, 8, 0, 0, 3],
- [5, 0, 0, 0, 0, 0],
- [0, 0, 4, 0, 0, 0]]
+[[0, 0, 0, 0, 0, 0],
+ [0, 4, 3, 5, 0, 0],
+ [0, 0, 0, 6, 0, 0],
+ [0, 0, 0, 0, 8, 7],
+ [0, 0, 2, 0, 0, 0],
+ [0, 0, 0, 1, 0, 0]]
         )
+        title = 'Interactive Board'
                             
     board = Board(board, show_costs = False, cell_size = 100)
     #print(np.array2string(board.board, separator= ', '))
     # Setup Tkinter Window
     root = tk.Tk()
-    root.title("Interactive Board")
+    root.title(title)
     
     H, W = board.dim
     canvas = tk.Canvas(root, width=W * board.cell_size, height=H * board.cell_size, 
