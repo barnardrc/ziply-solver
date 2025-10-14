@@ -1,4 +1,5 @@
 import numpy as np
+from solvers.dependents.dependents import get_checkpoints_vals_to_coords
 
 class DLXNode:
     def __init__(self):
@@ -13,11 +14,12 @@ class ColumnNode(DLXNode):
         self.size = 0
 
 class DLXSolver:
-    def __init__(self, matrix, row_ids):
+    def __init__(self, matrix, row_ids, start_cell):
         self.solution = []
         self.row_ids = row_ids
+        self.start_cell = start_cell
         self.root = self._build_links(matrix)
-
+        
     def _build_links(self, matrix):
         cols = [ColumnNode(i) for i in range(len(matrix[0]))]
         root = ColumnNode("root")
@@ -85,9 +87,20 @@ class DLXSolver:
         col.left.right = col
 
     def _search(self):
+        
+        # Format final path solution
         if self.root.right == self.root:
-            return [node.row_id for node in self.solution]
-
+            unordered_moves = [node.row_id for node in self.solution]
+            move_map = {start: end for start, end in unordered_moves}
+            path = [self.start_cell]
+            current_cell = self.start_cell
+            
+            for _ in range(len(unordered_moves)):
+                current_cell = move_map[current_cell]
+                path.append(current_cell)
+            
+            return path
+            
         # heuristic: choose column with fewest nodes
         col = None
         min_size = float("inf")
@@ -129,47 +142,66 @@ def build_dlx_matrix(board):
     """
     Build DLX matrix for Ziply.
     Columns:
-      - one for each cell
+      - cell_out (for all cells except the end point)
+      - cell_in (for all cells except the start point)
       - one for each checkpoint transition
     Rows:
       - each valid move (cell1 -> cell2)
     """
     H, W = board.shape
     cells = [(r, c) for r in range(H) for c in range(W)]
-    cell_index = {cell: i for i, cell in enumerate(cells)}
+    
+    # 1. Find the start and end cells from the checkpoint numbers
+    checkpoints = get_checkpoints_vals_to_coords(board)
+    start_cell = checkpoints[0][1]
+    end_cell = checkpoints[-1][1]
 
-    # checkpoint values in sorted order
-    checkpoints = sorted([board[r, c] for r, c in cells if board[r, c] > 0])
-    cp_required = [(checkpoints[i], checkpoints[i+1]) for i in range(len(checkpoints)-1)]
+    # 2. Create column lists that EXCLUDE the start_in and end_out constraints
+    cells_with_out_col = [cell for cell in cells if cell != end_cell]
+    cells_with_in_col = [cell for cell in cells if cell != start_cell]
 
-    col_count = len(cells) + len(cp_required)  # cells + transitions
+    # 3. Build the index dictionaries based on these filtered lists
+    offset = 0
+    cell_out_indices = {cell: i + offset for i, cell in enumerate(cells_with_out_col)}
+    
+    offset += len(cells_with_out_col)
+    cell_in_indices = {cell: i + offset for i, cell in enumerate(cells_with_in_col)}
+    
+    col_count = len(cell_out_indices) + len(cell_in_indices)
     rows = []
     row_ids = []
 
     moves = [(-1,0),(1,0),(0,-1),(0,1)]
-    for r, c in cells:
+    for r_from, c_from in cells:
         for dr, dc in moves:
-            nr, nc = r + dr, c + dc
-            if 0 <= nr < H and 0 <= nc < W:
+            r_to, c_to = r_from + dr, c_from + dc
+            if 0 <= r_to < H and 0 <= c_to < W:
+                from_cell = (r_from, c_from)
+                to_cell = (r_to, c_to)
+                
                 row = [0] * col_count
 
-                # must cover both cells
-                row[cell_index[(r,c)]] = 1
-                row[cell_index[(nr,nc)]] = 1
-
-                # checkpoint transition constraint
-                cp1, cp2 = board[r, c], board[nr, nc]
-                if cp1 > 0 and cp2 > 0 and (cp1, cp2) in cp_required:
-                    row[len(cells) + cp_required.index((cp1,cp2))] = 1
+                # 4. Conditionally set the '1's for the move
+                # A move out of from_cell is only a constraint if it's not the end point
+                if from_cell in cell_out_indices:
+                    row[cell_out_indices[from_cell]] = 1
+                
+                # A move into to_cell is only a constraint if it's not the start point
+                if to_cell in cell_in_indices:
+                    row[cell_in_indices[to_cell]] = 1
 
                 rows.append(row)
-                row_ids.append(((r, c), (nr, nc)))
+                row_ids.append((from_cell, to_cell))
 
     return np.array(rows), row_ids
 
 
 def solve_puzzle(board, simulationLength = None):
     matrix, row_ids = build_dlx_matrix(board)
-    solver = DLXSolver(matrix, row_ids)
+    
+    checkpoints = get_checkpoints_vals_to_coords(board)
+    start_cell = checkpoints[0][1]
+    
+    solver = DLXSolver(matrix, row_ids, start_cell)
     result = solver.solve()
     return result

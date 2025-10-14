@@ -9,6 +9,7 @@ Backtracking DFS Search algorithm
 @author: barna
 """
 import numpy as np
+from solvers.dependents.dependents import get_ordered_checkpoints
 
 def is_valid_backtrack_dfs(x, y, visited, n=6):
     """
@@ -17,19 +18,6 @@ def is_valid_backtrack_dfs(x, y, visited, n=6):
     yet (no intersecting previously visited positions).
     """
     return 0 <= x < n and 0 <= y < n and (x, y) not in visited
-
-# Takes the board and returns the coordinates of checkpoints in order
-def get_ordered_checkpoints(board):
-    ordered_checkpoints = []
-    num_checkpoints = len(np.where(board > 0)[0])
-    for i in range(num_checkpoints):
-        cp_loc = (np.where(board == i+1))
-        r, c = cp_loc[0], cp_loc[1]
-        cp = list(zip(r, c))[0]
-
-        ordered_checkpoints.append(cp)
-
-    return ordered_checkpoints
 
 def solve_puzzle(board, simulationLength = None
                   ):
