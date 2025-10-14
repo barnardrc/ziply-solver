@@ -39,7 +39,7 @@ from visualization_utils.board_anim import live_animation
 from visualization_utils.intersection_heatmap import intersection_heatmap
 from game_data import GameData
 from utils.cli_parser import parse_arguments
-from solvers.dlx_test import solve_puzzle
+from solvers.backwards_dfs import solve_puzzle
 
 # ----- Import End ----- #
 

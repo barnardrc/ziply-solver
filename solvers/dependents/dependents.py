@@ -10,6 +10,7 @@ import numbers
 def get_checkpoint_vals_to_coords(board):
     return sorted([(board[r, c], (r, c)) for r,c in np.ndindex(board.shape) if board[r, c] > 0])
 
+# Returns coordinates ordered
 def get_ordered_checkpoints(board):
     ordered_checkpoints = []
     num_checkpoints = len(np.where(board > 0)[0])

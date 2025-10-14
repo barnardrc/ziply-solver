@@ -4,7 +4,7 @@ Now works backwards from the last checkpoint to the first (e.g. 8 → 1).
 """
 
 import numpy as np
-from solvers.dependents.dependents import get_loc, get_ordered_checkpoints
+from solvers.dependents.dependents import get_loc, get_ordered_checkpoints, get_checkpoint_vals_to_coords
 
 # Movement deltas (up, down, left, right)
 MOVES = [(-1, 0), (1, 0), (0, -1), (0, 1)]
@@ -21,10 +21,10 @@ def solve_puzzle(board: np.ndarray, max_steps: int = 1000, simulationLength = No
         list[(int, int)] | None: Path as list of coordinates, or None if no solution.
     """
     # find all checkpoints
-    checkpoints = get_ordered_checkpoints()
+    checkpoints = [val[0] for val in get_checkpoint_vals_to_coords(board)]
     last_cp = max(checkpoints)
     first_cp = min(checkpoints)
-    
+
     N = board.shape[0] * board.shape[1]
     # locate starting coordinate (the last checkpoint, e.g. 8)
     start = get_loc(board, last_cp)
@@ -34,7 +34,6 @@ def solve_puzzle(board: np.ndarray, max_steps: int = 1000, simulationLength = No
     def dfs(pos, current_cp):
         if len(path) > max_steps:
             return None
-
         r, c = pos
         visited.add(pos)
         path.append(pos)
@@ -60,5 +59,4 @@ def solve_puzzle(board: np.ndarray, max_steps: int = 1000, simulationLength = No
         visited.remove(pos)
         path.pop()
         return None
-    
     return dfs(start, last_cp)
