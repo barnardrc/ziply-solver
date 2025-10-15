@@ -44,14 +44,29 @@ def get_loc(board, target):
     else:
         return None
 
-def is_adjacent(row, col, target_row, target_col):
-    """
-
+def is_adjacent(coord1, coord2, target_row = None, target_col = None):
     """
     
-    return (abs(row - target_row) == 1 and col == target_col) or \
-           (abs(col - target_col) == 1 and row == target_row)
-
+    """
+    if isinstance(coord1, numbers.Integral) and isinstance(coord2, numbers.Integral):
+        row = coord1
+        col = coord1
+        return (abs(row - target_row) == 1 and col == target_col) or \
+               (abs(col - target_col) == 1 and row == target_row)
+    elif isinstance(coord1, (tuple, list, set)) and isinstance(coord2, (tuple, list, set)):
+        row = coord1[0]
+        col = coord1[1]
+        target_row = coord2[0]
+        target_col = coord2[1]
+    
+        
+        return (abs(row - target_row) == 1 and col == target_col) or \
+               (abs(col - target_col) == 1 and row == target_row)
+               
+    else:
+        raise ValueError("is_adjacent expects integer or tuple.")
+    
+    
 def _get_sequential_pairs(xlist):
     new_list = []
     for i in range(len(xlist) - 1):

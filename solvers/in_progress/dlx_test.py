@@ -144,7 +144,6 @@ def build_dlx_matrix(board):
     Columns:
       - cell_out (for all cells except the end point)
       - cell_in (for all cells except the start point)
-      - one for each checkpoint transition
     Rows:
       - each valid move (cell1 -> cell2)
     """
@@ -181,12 +180,9 @@ def build_dlx_matrix(board):
                 
                 row = [0] * col_count
 
-                # 4. Conditionally set the '1's for the move
-                # A move out of from_cell is only a constraint if it's not the end point
                 if from_cell in cell_out_indices:
                     row[cell_out_indices[from_cell]] = 1
                 
-                # A move into to_cell is only a constraint if it's not the start point
                 if to_cell in cell_in_indices:
                     row[cell_in_indices[to_cell]] = 1
 

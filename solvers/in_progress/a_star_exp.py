@@ -207,7 +207,7 @@ def prepend_prev_last_item(xdict):
         second_value.insert(0, first_value)
 
 def solve_puzzle(board, dummy_coords = None, simulationLength = None):
-    do_flipper = False
+    do_flipper = True
     counter = VariableHandler()
     visited_coords = set(get_loc(board, 1))
     total_checkpoints = np.sum(board > 0)

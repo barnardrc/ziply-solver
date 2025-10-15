@@ -58,11 +58,8 @@ def flip_adjacent_open(open_coords = None,
     print(f"Current checkpoint: {cp}")
     local_open = open_coords[:]
     path_segment = dict_of_coords[cp]
-    get_adjacent_coords(path_segment, local_open)
     
-    adjacent_coords = []
-    flip_list = []
-    found = None
+    found = False
     """
     Here, it loops through every pair of coords in the path and finds
     every adjacent coord that is in the open list.
@@ -73,37 +70,36 @@ def flip_adjacent_open(open_coords = None,
     
     """
 
-    for i, (x1, y1) in enumerate(path_segment):
-        
+    for i in range(len(path_segment)):
+        source1, source2 = path_segment[i], path_segment[i+1]
         # Checks for adjacent coords to the path
-        for (x2, y2) in local_open:
-            if is_adjacent(x1, y1, x2, y2):
-                adjacent_coords.append((x2, y2))
+        adj_to_source1 = [c for c in local_open if is_adjacent(source1, c)]
+        adj_to_source2 = [c for c in local_open if is_adjacent(source2, c)]
                 
-                if len(adjacent_coords) > 1:
-                    # Checks for which coordinates that are adjacent to the path
-                    # are also adjacent to each other
-                    for (a1, b1) in adjacent_coords:
-                        
-                        for (a2, b2) in adjacent_coords:
-                            if is_adjacent(a1, b1, a2, b2):
-                                print(a1, b1)
-                                flip_list.append((a1, b1))
-                                src = path_segment[i-1]
-                                found = True
-                                
-                            if found:
-                                break
-                    if found:
-                        break
-        if found:
-            break
+        if not adj_to_source1 or not adj_to_source2:
+            continue
 
-    
+                        
+        for coord1 in adj_to_source1:
+            for coord2 in adj_to_source2:
+                # 4. The final adjacency check
+                if is_adjacent(coord1, coord2):
+                    # Found the first flippable pair, return it and stop.
+                    flippable = {
+                        "flippable_pair": (coord1, coord2),
+                        "source_segment": (source1, source2)
+                    }
+                    found = True
+
     if found:
-        #print(f"From space {src}, fill {flip_list[0]} then {flip_list[1]} before continuing.")
-        print(f"flip list: {flip_list}")
+        print(f"Flippable: {flippable}")
+        src = flippable['source_segment'][0]
+        flip_list = flippable['flippable_pair']
+        
+        print(f"From space {src}, fill {flip_list[0]} then {flip_list[1]} before continuing.")
+        
         insert_flipped(path_segment, src, flip_list)
+        
         dict_of_coords[cp] = path_segment
         return True
     
@@ -113,7 +109,7 @@ def flip_adjacent_open(open_coords = None,
         if cp != 2:
             dict_of_coords[cp] = path_segment[1:]
             #print(path_segment[:])
-        #print(f"No changes made from checkpoint {cp}.")
+        print(f"No changes made from checkpoint {cp}.")
         return False
     #print(dict_of_coords[cp])
     
