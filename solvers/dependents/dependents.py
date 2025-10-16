@@ -30,19 +30,20 @@ def get_closed_coords(dict_of_coords):
     return [coord for coord_list in dict_of_coords.values() for coord in coord_list]
 
         
-def get_loc(board, target):
+def get_loc(board, target: int):
     """
 
     """
     
     if isinstance(target, numbers.Integral):
         coords = np.where(board == target)
+
         row = coords[0][0]
         col = coords[1][0]
         
         return (row, col)
     else:
-        return None
+        raise ValueError("get_loc expected target to be an integer!")
 
 def is_adjacent(coord1, coord2, target_row = None, target_col = None):
     """
@@ -66,19 +67,7 @@ def is_adjacent(coord1, coord2, target_row = None, target_col = None):
     else:
         raise ValueError("is_adjacent expects integer or tuple.")
     
-    
-def _get_sequential_pairs(xlist):
-    new_list = []
-    for i in range(len(xlist) - 1):
-        temp_list = xlist[i:i+2]
-        new_list.append(temp_list)
-    
-    return new_list
-
-def is_continuous(path_segment, row, col, target_row, target_col):
-    pass
-
-def is_within_board(x, y, visited, n=6):
+def is_within_board(x, y, visited = None, n=6):
     """
     Checks that a move resulted in a position that is still within
     the game board boundaries

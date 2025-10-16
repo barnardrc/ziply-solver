@@ -6,7 +6,7 @@ Created on Sun Sep 21 14:33:46 2025
 """
 import numpy as np
 import random
-from solvers.sat_solver import solve_puzzle
+from solvers.backwards_dfs import solve_puzzle
 import time
 import re
 
@@ -96,11 +96,18 @@ def main():
         print(f"Amount of boards: {amount_boards}\n")
         
         # Begin
+        solvable_amount_target = 12
         start_time = time.time()
         successes = 0
         for i in range(amount_boards):
+            boards_left = amount_boards - i + 1
+            if solvable_amount_target == 0:
+                print("Target amount of boards found!")
+                break
+            
             if i % 100 == 0:
                 print(f"Boards found: {successes}")
+                print(f"Boards left to check: {boards_left}")
                 
             board = generate_random_board(H, W, num_checkpoints)
             print(f"Board #{i+1}: ", end = '')
@@ -117,6 +124,7 @@ def main():
                 if new_board not in stored_arrays_set:
                     print("New unique array found. Adding to the set.")
                     stored_arrays_set.add(new_board)
+                    solvable_amount_target -= 1
                 
                 else:
                     print("Array already exists. Discarding.")

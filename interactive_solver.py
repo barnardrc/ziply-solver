@@ -745,6 +745,7 @@ def generate_random_board(height: int, width: int, num_checkpoints: int):
 
 def main():
     # Params for random board
+    desired_board = 'arr_1'
     generated_boards = True
     random_board = False
     if random_board:
@@ -758,24 +759,30 @@ def main():
     elif generated_boards:
         all_boards = get_boards(dims_to_check = '6x6')
         keys = list(all_boards.keys())
-        random_key = random.choice(keys)
-        
-        board = all_boards[random_key]
-        title = f'{random_key}'
+        if desired_board is not None:
+            board = all_boards[desired_board]
+            title = f'{desired_board}'
+            
+        else:
+            random_key = random.choice(keys)
+            board = all_boards[random_key]
+            title = f'{random_key}'
         
     else:
         board = np.array(
-[[0, 0, 0, 0, 0, 0],
- [0, 4, 3, 5, 0, 0],
- [0, 0, 0, 6, 0, 0],
- [0, 0, 0, 0, 8, 7],
- [0, 0, 2, 0, 0, 0],
- [0, 0, 0, 1, 0, 0]]
+        [[0, 0, 0, 0, 0, 0],
+         [0, 4, 3, 5, 0, 0],
+         [0, 0, 0, 6, 0, 0],
+         [0, 0, 0, 0, 8, 7],
+         [0, 0, 2, 0, 0, 0],
+         [0, 0, 0, 1, 0, 0]]
         )
+        
         title = 'Interactive Board'
-                            
+    
     board = Board(board, show_costs = False, cell_size = 100)
     #print(np.array2string(board.board, separator= ', '))
+    
     # Setup Tkinter Window
     root = tk.Tk()
     root.title(title)

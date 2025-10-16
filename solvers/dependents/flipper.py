@@ -10,8 +10,7 @@ the squares to visited in the checkpoint order it received.
 
 from solvers.dependents.dependents import (
     get_closed_coords as gcc, 
-    is_adjacent, 
-    is_continuous
+    is_adjacent
     )
 
 import numpy as np
@@ -35,8 +34,8 @@ def insert_flipped(target_list, src, flip_list):
 
 # Gets coords adjacent to the path and uses its corresponding path as the key
 def get_adjacent_coords(path_segment, open_coords):
-    print("Things in get_adjacent_coords: ")
-    print(f"For path: {path_segment}")
+    #print("Things in get_adjacent_coords: ")
+    #print(f"For path: {path_segment}")
     adjacent_coords = {}
     for (x1, y1) in (path_segment):
         temp_list = []
@@ -45,8 +44,8 @@ def get_adjacent_coords(path_segment, open_coords):
                 temp_list.append((x2, y2))
                 adjacent_coords[(x1, y1)] = temp_list
                 
-    print(adjacent_coords)
-    print()
+    #print(adjacent_coords)
+    #print()
 
 
 # Takes the path to a specified checkpoint and finds the open coords that 
@@ -55,7 +54,7 @@ def flip_adjacent_open(open_coords = None,
                        dict_of_coords = None,
                        cp = 2
                        ):
-    print(f"Current checkpoint: {cp}")
+    #print(f"Current checkpoint: {cp}")
     local_open = open_coords[:]
     path_segment = dict_of_coords[cp]
     
@@ -70,7 +69,7 @@ def flip_adjacent_open(open_coords = None,
     
     """
 
-    for i in range(len(path_segment)):
+    for i in range(len(path_segment) -1 ):
         source1, source2 = path_segment[i], path_segment[i+1]
         # Checks for adjacent coords to the path
         adj_to_source1 = [c for c in local_open if is_adjacent(source1, c)]
@@ -92,11 +91,11 @@ def flip_adjacent_open(open_coords = None,
                     found = True
 
     if found:
-        print(f"Flippable: {flippable}")
+        #print(f"Flippable: {flippable}")
         src = flippable['source_segment'][0]
         flip_list = flippable['flippable_pair']
         
-        print(f"From space {src}, fill {flip_list[0]} then {flip_list[1]} before continuing.")
+        #print(f"From space {src}, fill {flip_list[0]} then {flip_list[1]} before continuing.")
         
         insert_flipped(path_segment, src, flip_list)
         
@@ -109,7 +108,7 @@ def flip_adjacent_open(open_coords = None,
         if cp != 2:
             dict_of_coords[cp] = path_segment[1:]
             #print(path_segment[:])
-        print(f"No changes made from checkpoint {cp}.")
+        #print(f"No changes made from checkpoint {cp}.")
         return False
     #print(dict_of_coords[cp])
     
