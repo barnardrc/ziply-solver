@@ -14,4 +14,4 @@ venv/
 Thumbs.db
 
 # Other
-in_progress/
+solvers/in_progress/
