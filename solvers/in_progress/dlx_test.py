@@ -150,16 +150,13 @@ def build_dlx_matrix(board):
     H, W = board.shape
     cells = [(r, c) for r in range(H) for c in range(W)]
     
-    # 1. Find the start and end cells from the checkpoint numbers
     checkpoints = get_checkpoints_vals_to_coords(board)
     start_cell = checkpoints[0][1]
     end_cell = checkpoints[-1][1]
 
-    # 2. Create column lists that EXCLUDE the start_in and end_out constraints
     cells_with_out_col = [cell for cell in cells if cell != end_cell]
     cells_with_in_col = [cell for cell in cells if cell != start_cell]
 
-    # 3. Build the index dictionaries based on these filtered lists
     offset = 0
     cell_out_indices = {cell: i + offset for i, cell in enumerate(cells_with_out_col)}
     
