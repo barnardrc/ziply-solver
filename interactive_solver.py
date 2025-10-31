@@ -2,17 +2,12 @@
 """
 Created on Wed Sep 17 13:24:25 2025
 
-This script essentially builds the ziply game board locally with passed arrays.
--This will be useful for a few reasons:
-    1. implementing measuring UI elements that update as the
-        state progresses
-    2. Custom board generation
+This script essentially builds the ziply game board locally with passed arrays,
+or generates a random board with specific inputs 
+- Dimensions
+- number of checkpoints
 
-There is currently a random board generator, but if used, it is most likely
-to create unsolvable boards.
-For now, you can either run the solver with arg -dc to show coords for a 
-solvable puzzle on ziply game, or you can use npzchecker.py in 
-custom_boards to show generated boards for each available dimension
+Set params in main() at the bottom of script
 
 @author: barna
 """
@@ -744,20 +739,32 @@ def generate_random_board(height: int, width: int, num_checkpoints: int):
 
 
 def main():
-    # Params for random board
-    desired_board = 'arr_1'
-    generated_boards = True
+    ### If you want to see a specific, passed array, skip these parameters.
+    # this is the default behavior. Set your array in the else statement. ###
+    
+    # If not using a random board or a specific passed array, use this
+    # 1. Set dimensions for npz file to check
+    all_boards = get_boards(dims_to_check = '6x6')
+    # 2. Set generated boards to True
+    generated_boards = False
+    # 3. Optionally, if you know the key of the board you want to see
+    # set it here.
+    desired_board = None
+    
+    # Optionally, generate a random board to display. The array string will print to
+    # console.
     random_board = False
+    
     if random_board:
-        height = 16
-        width = 16
-        num_checkpoints = 32
+        height = 6
+        width = 6
+        num_checkpoints = 3
     
         board = generate_random_board(height, width, num_checkpoints)
         title = 'Interactive Board'
-        
+    
+    #
     elif generated_boards:
-        all_boards = get_boards(dims_to_check = '6x6')
         keys = list(all_boards.keys())
         if desired_board is not None:
             board = all_boards[desired_board]
@@ -770,18 +777,18 @@ def main():
         
     else:
         board = np.array(
-        [[0, 0, 0, 0, 0, 0],
-         [0, 4, 3, 5, 0, 0],
-         [0, 0, 0, 6, 0, 0],
-         [0, 0, 0, 0, 8, 7],
-         [0, 0, 2, 0, 0, 0],
-         [0, 0, 0, 1, 0, 0]]
+[[0, 0, 0, 0, 0, 1],
+ [7, 0, 0, 0, 8, 0],
+ [5, 6, 0, 2, 0, 0],
+ [0, 0, 0, 0, 0, 0],
+ [0, 0, 0, 0, 0, 3],
+ [0, 4, 0, 0, 0, 0]]
         )
         
         title = 'Interactive Board'
     
     board = Board(board, show_costs = False, cell_size = 100)
-    #print(np.array2string(board.board, separator= ', '))
+    print(np.array2string(board.board, separator= ', '))
     
     # Setup Tkinter Window
     root = tk.Tk()

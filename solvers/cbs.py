@@ -267,10 +267,11 @@ def return_solved(board, current_node, iteration, do_flipper):
         full_path = gcc(target_to_path)
     
     full_path = gcc(target_to_path)
+    
     return full_path, iteration
 
 def solve_puzzle(board, simulationLength = None):
-    do_flipper = True
+    do_flipper = False
     counter = VariableHandler()
     
     path_segments = {}
@@ -289,6 +290,10 @@ def solve_puzzle(board, simulationLength = None):
             path_object.constraints,
             counter
             )
+        
+        # The board is fundamentally unsolvable
+        if path_coordinates is None:
+            return None 
         
         path_object.update_coordinates(path_coordinates)
         
@@ -325,6 +330,7 @@ def solve_puzzle(board, simulationLength = None):
 
         if branch_B is not None:
             heapq.heappush(priority_queue, branch_B)
-        
+            
+    return None
 if __name__ == "__main__":
     solve_puzzle()

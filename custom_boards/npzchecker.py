@@ -2,6 +2,11 @@
 """
 Created on Sun Sep 21 15:10:03 2025
 
+Run script and set dimensions you want to see. This will print them to console.
+
+If you want to see an npz file via this script that has a checkpoint or CBS
+parameter, it will have to be modified.
+
 @author: barna
 """
 import numpy as np

@@ -25,7 +25,7 @@ def get_ordered_checkpoints(board):
         print(f"\nEXCEPTION:\nget_ordered_checkpoints failed with the following exception:\n{e}.\nDid you set board dimensions in main?\n")
         sys.exit(1)
         
-def solve_puzzle(board = None, *args):
+def solve_puzzle(board = None, simulationLength = None):
 
     ROW = board.shape[0]
     COL = board.shape[1]
