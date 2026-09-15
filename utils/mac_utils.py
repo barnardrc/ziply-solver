@@ -23,7 +23,7 @@ if sys.platform != "darwin":
 
 # Imports from the PyObjC bridge
 import Quartz               # type: ignore   (Quartz is provided by pyobjc)
-from AppKit import NSScreen  # type: ignore
+from AppKit import NSScreen, NSWorkspace  # type: ignore
 
 
 def _get_main_display_height() -> int:
@@ -53,7 +53,7 @@ def get_foreground_window() -> Optional[Tuple[int, int, int, int]]:
     """
     
     # Determine foreground window
-    workspace = Quartz.NSWorkspace.sharedWorkspace()
+    workspace = NSWorkspace.sharedWorkspace()
     front_app = workspace.frontmostApplication()
     if front_app is None:
         return None
