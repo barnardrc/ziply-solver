@@ -29,7 +29,7 @@ An experimental computer-vision and constraint-solving pipeline for the Ziply br
 - Python 3.12 is the tested target
 - A desktop session with permission to capture the screen and control the mouse
 - Tk support when using the interactive board or Matplotlib visualizations
-- X11 on Linux; Wayland is not currently supported by the automation path
+- X11 and the `xdotool` command on Linux; Wayland is not currently supported by the automation path
 
 This is an experimental personal project. Browser layout, display scaling, puzzle dimensions, and visual changes can affect board recognition. The current automated entry point is tuned for the dimensions configured near the start of `main()` and has primarily been exercised with 5×5 and 6×6 boards.
 
