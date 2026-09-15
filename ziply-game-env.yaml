@@ -14,5 +14,5 @@ dependencies:
   - pip
   - pip:
     - opencv-python
+    - Pillow
     - python-sat
-prefix: C:\Users\barna\anaconda3\envs\ziply-game-env

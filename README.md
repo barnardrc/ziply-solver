@@ -1,81 +1,136 @@
 <p align="center">
-  <img src="assets/demo.gif" alt="Ziply Solver Demo" width="400"/>
+  <img src="assets/demo.gif" alt="Ziply Solver demo" width="400">
 </p>
 
-# ziply-solver
-An automated solver for the Ziply puzzle game using computer vision and various solving strategies.
+# Ziply Solver
 
-## Description
-`ziply-solver` automatically plays and solves the Ziply browser puzzle. It works by capturing the game board from the screen, detecting puzzle elements, reconstructing the board internally, and using various solvers to find the valid solution path. The solution is then executed in real time using `pyautogui`.
+An experimental computer-vision and constraint-solving pipeline for the Ziply browser puzzle. It captures a puzzle from the screen, reconstructs its grid and checkpoints, searches for a valid path, and can draw the solution with desktop automation.
 
-### Processing pipeline
-1. Capture the active puzzle window
-2. Detect all circles in the window
-3. Identify the cluster representing the puzzle
-4. Zoom into the puzzle region of interest (ROI)  
-5. Detect puzzle board edges  
-6. Extract and preprocess checkpoints  
-7. Recognize checkpoint digits (OCR) and order them  
-8. Convert pixel coordinates → grid coordinates  
+## What it demonstrates
 
-### Solving
-- The board is simulated as a 2D array.  
-- A solver will find the valid path through all checkpoints.  
-- Grid coordinates are mapped back to pixel coordinates.  
-- `pyautogui` interacts with the browser to draw the solution automatically.
+- A staged OpenCV pipeline for board detection and coordinate extraction
+- A small TensorFlow classifier for recognizing checkpoint numbers
+- Multiple graph-search experiments, including SAT and constraint-based solvers
+- Conversion between screen pixels, grid coordinates, and an automated mouse path
+- Visualization tools for solver paths and intersection heatmaps
+
+## How the pipeline works
+
+1. Wait for the user to select the puzzle window.
+2. Capture the selected window and locate the board.
+3. Detect cells and checkpoint circles with OpenCV.
+4. Classify the checkpoint numbers with the included Keras model.
+5. Reconstruct the puzzle as a NumPy array.
+6. Find a path through the checkpoints in order.
+7. Optionally print, visualize, or draw the solution.
+
+## Requirements
+
+- Python 3.12 is the tested target
+- A desktop session with permission to capture the screen and control the mouse
+- Tk support when using the interactive board or Matplotlib visualizations
+- X11 on Linux; Wayland is not currently supported by the automation path
+
+This is an experimental personal project. Browser layout, display scaling, puzzle dimensions, and visual changes can affect board recognition. The current automated entry point is tuned for the dimensions configured near the start of `main()` and has primarily been exercised with 5×5 and 6×6 boards.
 
 ## Installation
 
-### Using Conda
-To create the environment from the provided YAML file:
+### Conda
 
 ```bash
-conda env create -f environment.yaml
+conda env create -f ziply-game-env.yaml
 conda activate ziply-game-env
 ```
-### Using Pip
-To install dependencies from requirements.txt:
+
+### `venv` and pip
 
 ```bash
-python -m venv ziply-env
+python -m venv .venv
 ```
+
+Activate it on macOS or Linux:
+
 ```bash
-source ziply-env/bin/activate      # macOS/Linux
+source .venv/bin/activate
 ```
-```bash
-ziply-env\Scripts\activate.bat     # Windows
+
+Or on Windows PowerShell:
+
+```powershell
+.venv\Scripts\Activate.ps1
 ```
+
+Then install the runtime dependencies:
+
 ```bash
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 ```
-If you are on MacOS, you will also need to install pyobj.
+
+macOS users may also need `pyobjc` for desktop automation:
+
 ```bash
-pip install -U pyobjc
+python -m pip install pyobjc
 ```
 
 ## Usage
 
-After installation, run the program from the root directory:
+Close unrelated sensitive windows before running the program: it captures the selected window and can take control of the mouse.
+
 ```bash
 python main.py [OPTIONS]
 ```
-You will be prompted to click the window that contains the puzzle. Once clicked, there is a one second delay until it begins solving. To solve another puzzle, you must rerun the script.
 
-### Comand-Line Options
+The program waits for a click on the target window and then begins processing after a short delay. Use `--no-solution` while testing recognition so the program does not control the mouse.
 
-The following optional arguments are available to customize the script's behavior:
+| Option | Short form | Purpose |
+| --- | --- | --- |
+| `--show-animation` | `-sa` | Display a final path animation. |
+| `--no-solution` | `-ns` | Do not draw the solution in the selected window. |
+| `--display-coords` | `-dc` | Print the reconstructed board and solution coordinates. |
+| `--show-heatmap` | `-hm` | Display an intersection heatmap. |
+| `--trouble-shoot` | `-ts` | Show additional OCR-pipeline diagnostics. |
+| `--sim-length N` | `-sl N` | Limit the solver simulation to the first `N` steps. |
 
-- --show-animation (-na): Enables the final Matplotlib animation that shows the algorithm's path.
+Run `python main.py --help` for the authoritative CLI help.
 
-- --no-solution (-ns): Disables the automatic drawing of the solution in the puzzle window.
+## Other entry points
 
-- --display-coords (-dc): Prints the final solution path as a list of coordinates to the console and the board as an array.
+- `interactive_solver.py` renders local boards for solver experiments.
+- `standalone_solver.py` runs solver checks against the sample `.npz` boards.
+- `board_generator.py` generates boards for local experiments.
+- `OCR Model/custom_model_trainer.py` retrains the OCR model from a local dataset.
 
-- --sim-length N (-sl N): Animates only the first N steps of the algorithm's path. (Default: 1000)
+The training images are intentionally not stored in Git. To retrain the model, supply a directory containing numbered class folders and install the optional dependencies:
 
-- --show-heatmap (-hm): Show heatmap of possible intersections between checkpoints
-
-For a full list of commands, you can always run:
 ```bash
-python main.py --help
+python -m pip install -r requirements-training.txt
+python "OCR Model/custom_model_trainer.py" PATH_TO_TRAINING_DATA --output mnist_custom_digits.keras
 ```
+
+## Repository layout
+
+```text
+solvers/                 Path-search implementations
+utils/                   Platform and command-line helpers
+visualization_utils/     Animation and heatmap tools
+custom_boards/           Small sample boards for solver experiments
+OCR Model/               OCR training script (dataset excluded)
+mnist_custom_digits.keras Runtime OCR model
+```
+
+## Development
+
+The lightweight checks do not require the computer-vision stack:
+
+```bash
+python -m unittest discover -s tests -v
+python -m compileall -q .
+```
+
+## Responsible use
+
+Only automate software and accounts you are authorized to control. Review the rules of any site or game before using desktop automation. This repository is an educational experiment, not a supported service or a promise of compatibility with any third-party product.
+
+## License
+
+[MIT](LICENSE)

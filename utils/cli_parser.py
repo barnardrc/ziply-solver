@@ -7,7 +7,7 @@ Created on Mon Oct 13 20:14:04 2025
 
 import argparse
 
-def parse_arguments():
+def parse_arguments(argv=None):
     # ----- argparser ----- #
     
     parser = argparse.ArgumentParser(description="A solver for the Ziply directional graph puzzle.")
@@ -58,6 +58,6 @@ def parse_arguments():
         help = "First SIMULATIONLENGTH coordinates will be simulated."
     )
     
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     
     return args

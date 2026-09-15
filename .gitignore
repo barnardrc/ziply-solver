@@ -1,17 +1,32 @@
-# Python cache files
+# Python
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
 *.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 
-# Virtual environment folders
-env/
-venv/
+# Environments and packaging
 .venv/
+venv/
+env/
+build/
+dist/
+*.egg-info/
 
-# OS files
+# Editors and operating systems
+.idea/
+.vscode/
 .DS_Store
 Thumbs.db
 
-# Other
+# Local captures, generated data, and model-training artifacts
+captures/
+screenshots/
+OCR Model/train/
+OCR Model/*.keras
+
+# Experimental solver output
 solvers/in_progress/
